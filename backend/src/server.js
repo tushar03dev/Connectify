@@ -1,48 +1,66 @@
 import dotenv from "dotenv";
-import connectDB from "./config/db.js";
-import otpRoutes from "./routes/otpRoutes.js";
-import authRoutes from "./routes/authRoutes.js";
-import roomRoutes from "./routes/roomRoutes.js";
-import {createServer} from "http";
+import express from "express";
+import cors from "cors";
+import http from "http";
 import { Server } from "socket.io";
-import express from 'express';
-import cors from 'cors';
 import bodyParser from "body-parser";
 import multer from "multer";
-dotenv.config(); // Load environment variables from .env file
+import connectDB from "./config/db.js";
+import authRoutes from "./routes/authRoutes.js";
+import otpRoutes from "./routes/otpRoutes.js";
+import roomRoutes from "./routes/roomRoutes.js";
+import { setupSocketIO } from "./controllers/roomController.js";  // Import WebSocket logic
+
+dotenv.config();
 
 const app = express();
+const server = http.createServer(app);  // ✅ Attach Express to HTTP Server
+
+const io = new Server(server, {
+    cors: { origin: "*" },
+    transports: ["websocket", "polling"],  // ✅ Ensure correct transport
+});
+
+// ✅ Setup WebSocket Properly
+setupSocketIO(io);
+
+// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
-const server = createServer(app);
-const io = new Server(server, {
-    cors: { origin: "*" }
-});
-
-// Middleware to handle form-data
 const upload = multer();
-
-// Middleware to parse form-data
 app.use(upload.none());
 
-// Connect to MongoDB, then start the server
+// Database Connection
 connectDB();
 
-// Use the auth routes
-app.use('/auth', authRoutes); // Mounts the auth routes
+// Routes
+app.use("/auth", authRoutes);
+app.use("/otp", otpRoutes);
+app.use("/rooms", roomRoutes);
 
-// Use the auth routes
-app.use('/otp',otpRoutes); // Mounts the auth routes
-
-// use the room routes
-app.use('/rooms', roomRoutes); // Mount the room routes
-
-// Start the server
-const PORT = process.env.PORT || 5200;
-
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+// ✅ Keep a basic route to verify HTTP works
+app.get("/", (req, res) => {
+    res.send("WebSocket Server Running");
 });
 
+// ✅ Handle WebSocket Connection Directly
+io.on("connection", (socket) => {
+    console.log("✅ New WebSocket Connection:", socket.id);
+
+    socket.on("joinRoom", ({ roomId, username }) => {
+        console.log(`${username} joined room: ${roomId}`);
+        socket.join(roomId);
+        io.to(roomId).emit("roomUsers", { message: `${username} joined!` });
+    });
+
+    socket.on("disconnect", () => {
+        console.log("❌ User Disconnected:", socket.id);
+    });
+});
+
+// Start Server
+const PORT = process.env.PORT || 5200;
+server.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+});
