@@ -46,7 +46,7 @@ app.get("/", (req, res) => {
 
 // ✅ Handle WebSocket Connection Directly
 io.on("connection", (socket) => {
-    console.log("✅ New WebSocket Connection:", socket.id);
+    console.log("New WebSocket Connection:", socket.id);
 
     socket.on("joinRoom", ({ roomId, username }) => {
         console.log(`${username} joined room: ${roomId}`);
@@ -55,12 +55,12 @@ io.on("connection", (socket) => {
     });
 
     socket.on("disconnect", () => {
-        console.log("❌ User Disconnected:", socket.id);
+        console.log("User Disconnected:", socket.id);
     });
 });
 
 // Start Server
 const PORT = process.env.PORT || 5200;
 server.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });

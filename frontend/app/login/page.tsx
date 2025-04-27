@@ -44,9 +44,9 @@ export default function LoginPage() {
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
-      <Link href="/" className="mb-4 flex items-center space-x-2">
-        <span className="text-2xl font-bold">Connectify</span>
-      </Link>
+      {/*<Link href="/" className="mb-4 flex items-center space-x-2">*/}
+      {/*  <span className="text-2xl font-bold">Connectify</span>*/}
+      {/*</Link>*/}
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl">Login</CardTitle>
