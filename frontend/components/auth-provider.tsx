@@ -3,6 +3,9 @@
 import type React from "react"
 
 import { createContext, useContext, useEffect, useState } from "react"
+import axios from "axios";
+
+const API_BASE_URL = process.env.API_BASE_URL;
 
 type User = {
   id: string
@@ -40,11 +43,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = async (email: string, password: string) => {
-    // In a real app, this would make an API call to authenticate
-    // For demo purposes, we'll simulate a successful login with any credentials
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      const response = await axios.post(`${API_BASE_URL}/api/auth/sign-in`, { email, password });
+
+      if (response.data) {
+
+      }
+
 
       // Mock user data
       const userData = {
