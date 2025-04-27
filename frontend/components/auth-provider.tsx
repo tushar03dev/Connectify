@@ -69,11 +69,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signup = async (name: string, email: string, password: string) => {
-    // In a real app, this would make an API call to create a new user
-    // For demo purposes, we'll simulate a successful signup
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      const response = await axios.post(`${API_BASE_URL}/api/auth/sign-in`, { email, password });
+
+      if (response.data) {
+
+      }
 
       // Mock user data
       const userData = {
