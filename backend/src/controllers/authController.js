@@ -11,7 +11,7 @@ let tempUser = {};
 
 export const signUp = async (req, res) => {
 
-    const { name, email, password, phone,gender } = req.body;
+    const { name, email, password} = req.body;
     console.log('Received data:', { name, email, password}); // Log received data
 
     // Check for missing fields

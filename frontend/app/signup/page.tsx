@@ -20,6 +20,9 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const { signup } = useAuth()
+  const [showOtpInput, setShowOtpInput] = useState(false)
+  const [otp, setOtp] = useState("")
+  const [otpToken, setOtpToken] = useState('');
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,9 +109,29 @@ export default function SignupPage() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Sign Up"}
-            </Button>
+            {isLoading ? (
+                <>
+                  <Button type="button" className="w-full" disabled>
+                    Creating account...
+                  </Button>
+                  <Button type="button" className="w-full" onClick={() => setShowOtpInput(true)}>
+                    Enter OTP
+                  </Button>
+                  {showOtpInput && (
+                      <Input
+                          type="text"
+                          placeholder="Enter OTP"
+                          value={otp}
+                          onChange={(e) => setOtp(e.target.value)}
+                          className="w-full"
+                      />
+                  )}
+                </>
+            ) : (
+                <Button type="submit" className="w-full">
+                  Sign Up
+                </Button>
+            )}
             <div className="text-center text-sm">
               Already have an account?{" "}
               <Link href="/login" className="text-primary underline underline-offset-4 hover:text-primary/90">
