@@ -15,7 +15,7 @@ export const sendOTP = async (email) => {
     await transporter.sendMail({
         from: process.env.EMAIL_USER,
         to: email,
-        subject: 'Your Vedanta verification OTP Code',
+        subject: 'Your Conectify verification OTP Code',
         text: `Your OTP code is ${otp}. It will expire in 5 minutes.`,
     });
 

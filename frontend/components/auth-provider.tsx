@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('token', JSON.stringify(response.data.token));
         alert('Login successful!');
         // Redirect to dashboard or another page
-
+        window.location.href = '/';
 
         // Mock user data
         const userData = {
@@ -86,7 +86,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Temporarily store user data
         tempUser = { name, email};
 
-        alert('Otp is sent to your email.');
         localStorage.setItem("otpToken", JSON.stringify(response.data.otpToken))
         return true
       } else {
@@ -105,7 +104,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (response.data) {
         localStorage.setItem('token', JSON.stringify(response.data.token));
-        alert('Otp is sent to your email.');
 
         // Mock user data
         const userData = {
