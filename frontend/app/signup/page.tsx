@@ -55,7 +55,8 @@ export default function SignupPage() {
     const verified = await verifyOtp(otpToken, otp);
     if (verified) {
       alert("Account created successfully!");
-      // redirect to dashboard or login
+      // Redirect to dashboard or another page
+      router.push("/");
     }
   };
 

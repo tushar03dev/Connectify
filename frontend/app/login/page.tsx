@@ -20,7 +20,7 @@ export default function LoginPage() {
   const { login } = useAuth()
   const router = useRouter()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
@@ -52,7 +52,7 @@ export default function LoginPage() {
           <CardTitle className="text-2xl">Login</CardTitle>
           <CardDescription>Enter your email and password to access your account</CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
             {error && <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">{error}</div>}
             <div className="space-y-2">

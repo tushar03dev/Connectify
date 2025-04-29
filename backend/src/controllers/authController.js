@@ -98,7 +98,7 @@ export const completeSignUp = async (req, res) => {
         }
 
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '2h' });
-        res.json({ token });
+        res.json({ token, name:user.name });
     } catch (err) {
         console.error('Error during sign-in:', err);
         res.status(500).send('Error during sign-in');
