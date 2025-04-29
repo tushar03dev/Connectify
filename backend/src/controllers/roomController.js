@@ -1,5 +1,33 @@
 import { Room } from "../models/roomModel.js";
 
+export const createRoom = async (req, res) => {
+
+    const { name, code, userId } = req.body;
+    const roomExists = await Room.findOne({ code });
+
+    if (roomExists) {
+        return res.status(400).json({ message: 'Room already exists' });
+    }
+
+    const room = new Room({ code, name, users: [userId] });
+    await room.save();
+    res.status(201).json(room);
+}
+
+export const joinRoom = async (req, res) => {
+
+    const { code, userId } = req.body;
+    const room = await Room.findOne({ code });
+
+    if (!room) {
+        return res.status(404).json({ message: 'Room not found' });
+    }
+
+    room.members.push(userId);
+    await room.save();
+    res.json({ message: 'Joined successfully', room });
+}
+
 export const setupSocketIO = (io) => {
     io.on("connection", (socket) => {
         console.log("A user connected:", socket.id);

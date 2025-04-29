@@ -19,8 +19,8 @@ export default function RoomsPage() {
 
   // Mock rooms data
   const rooms = [
-    { id: "room-1", name: "Movie Night", participants: 3, createdAt: new Date() },
-    { id: "room-2", name: "Study Group", participants: 2, createdAt: new Date() }
+    { id: "room-1", name: "Movie Night", participants:['a','b']},
+    { id: "room-2", name: "Study Group", participants: ['a','b']}
   ]
 
   const handleCreateRoom = (e: React.FormEvent) => {
@@ -85,7 +85,7 @@ export default function RoomsPage() {
                           </div>
                           <div>
                             <h3 className="font-medium">{room.name}</h3>
-                            <p className="text-sm text-muted-foreground">{room.participants} participants</p>
+                            <p className="text-sm text-muted-foreground">{room.participants.length()} participants</p>
                           </div>
                         </div>
                         <Button size="sm" onClick={() => router.push(`/rooms/${room.id}`)}>

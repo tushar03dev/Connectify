@@ -8,6 +8,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
 type Room = {
     id: string
+    code: string
     name: string
     participants: string[]
 }
@@ -15,7 +16,7 @@ type Room = {
 type RoomContextType = {
     room: Room | null
     rooms: Room[]
-    createRoom: (name: string) => Promise<boolean>
+    createRoom: (name: string, code: string) => Promise<boolean>
     getRooms: () => Promise<boolean>
     isLoading: boolean
 }
@@ -33,14 +34,14 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
     const [rooms, setRooms] = useState<Room[]>([])
     const [isLoading, setIsLoading] = useState(false)
 
-    const createRoom = async (name: string) => {
+    const createRoom = async (name: string, code: string) => {
         try {
             setIsLoading(true)
             const token = JSON.parse(localStorage.getItem("token") || "")
 
             const response = await axios.post(
                 `${API_BASE_URL}/rooms/create`,
-                { name },
+                { name, code },
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
