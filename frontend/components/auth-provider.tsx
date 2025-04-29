@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('token', JSON.stringify(response.data.token));
         alert('Login successful!');
         // Redirect to dashboard or another page
-
+        window.location.href = '/';
 
         // Mock user data
         const userData = {
