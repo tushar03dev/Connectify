@@ -20,7 +20,7 @@ export default function RoomsPage() {
   // Mock rooms data
   const rooms = [
     { id: "room-1", name: "Movie Night", participants: 3, createdAt: new Date() },
-    { id: "room-2", name: "Study Group", participants: 2, createdAt: new Date() },
+    { id: "room-2", name: "Study Group", participants: 2, createdAt: new Date() }
   ]
 
   const handleCreateRoom = (e: React.FormEvent) => {

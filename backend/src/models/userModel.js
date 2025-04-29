@@ -5,6 +5,8 @@ const userSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    rooms:[{type: mongoose.Schema.Types.ObjectId, ref: "Room"}],
 });
 
 export const User = mongoose.model('users', userSchema);
+
