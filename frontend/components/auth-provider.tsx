@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Mock user data
         const userData = {
           id: "user-" + Math.random().toString(36).substr(2, 9),
-          name: email.split("@")[0],
+          name: response.data.name,
           email,
         }
 
