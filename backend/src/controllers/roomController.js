@@ -1,4 +1,5 @@
 import { Room } from "../models/roomModel.js";
+import {User} from "../models/userModel.js";
 
 export const createRoom = async (req, res) => {
 
@@ -26,6 +27,16 @@ export const joinRoom = async (req, res) => {
     room.members.push(userId);
     await room.save();
     res.json({ message: 'Joined successfully', room });
+}
+
+export const getRooms = async (req, res) => {
+    const { userId } = req.body;
+
+    const rooms = await Room.find({
+        members: {$elemMatch: {userId: userId}},
+    });
+
+    res.status(200).json(rooms);
 }
 
 export const setupSocketIO = (io) => {
