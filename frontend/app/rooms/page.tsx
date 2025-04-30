@@ -28,11 +28,12 @@ export default function RoomsPage() {
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsCreating(true)
-    console.log("hiii")
+
     const roomId = "room-" + Math.random().toString(36).substr(2, 9);
-    console.log(roomId)
     const success = await createRoom(roomName,roomId)
+
     console.log("success", success)
+
     if (success && typeof success === "object") {
       const newRoom = rooms.find((r) => r.name === roomName)
       if (newRoom) router.push(`/rooms/${newRoom.code}`)

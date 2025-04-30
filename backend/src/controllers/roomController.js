@@ -9,8 +9,9 @@ export const createRoom = async (req, res) => {
     if (roomExists) {
         return res.status(400).json({ message: 'Room already exists' });
     }
-
-    const room = new Room({ code, name, users: [userId] });
+    console.log(userId);
+    const room = new Room({ code, name, members: [userId] });
+    console.log(room);
     await room.save();
     res.status(201).json(room);
 }
@@ -33,10 +34,10 @@ export const getRooms = async (req, res) => {
     const { userId } = req.body;
 
     const rooms = await Room.find({
-        members: {$elemMatch: {userId: userId}},
+        members: userId,
     });
 
-    res.status(200).json(rooms);
+    res.status(200).json({rooms:rooms});
 }
 
 export const setupSocketIO = (io) => {

@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await axios.post(`${API_BASE_URL}/auth/sign-in`, { email, password });
 
       if (response.data) {
-        localStorage.setItem('token', JSON.stringify(response.data.token));
+        localStorage.setItem('token', response.data.token);
         alert('Login successful!');
         // Redirect to dashboard or another page
         window.location.href = '/';
