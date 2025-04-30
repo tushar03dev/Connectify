@@ -1,5 +1,4 @@
 import { Room } from "../models/roomModel.js";
-import {User} from "../models/userModel.js";
 
 export const createRoom = async (req, res) => {
 
@@ -9,11 +8,10 @@ export const createRoom = async (req, res) => {
     if (roomExists) {
         return res.status(400).json({ message: 'Room already exists' });
     }
-    console.log(userId);
+
     const room = new Room({ code, name, members: [userId] });
-    console.log(room);
     await room.save();
-    res.status(201).json(room);
+    res.status(201).json({room:room});
 }
 
 export const joinRoom = async (req, res) => {

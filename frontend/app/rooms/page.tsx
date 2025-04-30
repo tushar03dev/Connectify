@@ -29,14 +29,12 @@ export default function RoomsPage() {
     e.preventDefault()
     setIsCreating(true)
 
-    const roomId = "room-" + Math.random().toString(36).substr(2, 9);
+    const roomId = "room-" + Math.random().toString(36).substr(2, 9)
     const success = await createRoom(roomName,roomId)
 
-    console.log("success", success)
-
-    if (success && typeof success === "object") {
+    if (success === true) {
       const newRoom = rooms.find((r) => r.name === roomName)
-      if (newRoom) router.push(`/rooms/${newRoom.code}`)
+      if (newRoom) router.push(`/rooms/${roomId}`)
     }
     setIsCreating(false)
   }

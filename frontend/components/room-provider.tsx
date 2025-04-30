@@ -15,7 +15,7 @@ type Room = {
 type RoomContextType = {
     room: Room | null
     rooms: Room[]
-    createRoom: (name: string, code: string) => Promise<Room | false>
+    createRoom: (name: string, code: string) => Promise<Boolean>
     getRooms: () => Promise<boolean>
     isLoading: boolean
 }
@@ -35,7 +35,7 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
 
     const createRoom = async (name: string, code: string) => {
         try {
-            console.log("createRoom", name, code)
+
             setIsLoading(true)
             const token = localStorage.getItem("token")
             if (!token) {
@@ -53,10 +53,7 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
                 }
             )
 
-            if (response.data?.rooms) {
-                setRoom(response.data.rooms)
-                return response.data.rooms
-            }
+            if (response.data?.room) return true
             return false
         } catch (error) {
             console.error("Error creating room:", error)
@@ -81,9 +78,9 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
                     Authorization: `Bearer ${token}`,
                 },
             })
-            console.log(response.data)
+
             if (response.data?.rooms) {
-                console.log(response.data?.rooms)
+
                 setRooms(response.data.rooms)
                 return true
             }
