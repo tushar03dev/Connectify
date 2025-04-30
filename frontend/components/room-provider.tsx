@@ -7,16 +7,15 @@ import axios from "axios"
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
 type Room = {
-    id: string
     code: string
     name: string
-    participants: string[]
+    members: string[]
 }
 
 type RoomContextType = {
     room: Room | null
     rooms: Room[]
-    createRoom: (name: string, code: string) => Promise<boolean>
+    createRoom: (name: string, code: string) => Promise<Room | false>
     getRooms: () => Promise<boolean>
     isLoading: boolean
 }
@@ -36,8 +35,13 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
 
     const createRoom = async (name: string, code: string) => {
         try {
+            console.log("createRoom", name, code)
             setIsLoading(true)
-            const token = JSON.parse(localStorage.getItem("token") || "")
+            const token = localStorage.getItem("token")
+            if (!token) {
+                console.log("token not found")
+                return false
+            }
 
             const response = await axios.post(
                 `${API_BASE_URL}/rooms/create`,
@@ -51,7 +55,7 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
 
             if (response.data?.room) {
                 setRoom(response.data.room)
-                return true
+                return response.data.room
             }
             return false
         } catch (error) {
@@ -67,7 +71,7 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
             setIsLoading(true)
             const token = JSON.parse(localStorage.getItem("token") || "")
 
-            const response = await axios.get(`${API_BASE_URL}/rooms`, {
+            const response = await axios.get(`${API_BASE_URL}/rooms/get-rooms`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
