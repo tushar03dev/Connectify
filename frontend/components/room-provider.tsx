@@ -53,9 +53,9 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
                 }
             )
 
-            if (response.data?.room) {
-                setRoom(response.data.room)
-                return response.data.room
+            if (response.data?.rooms) {
+                setRoom(response.data.rooms)
+                return response.data.rooms
             }
             return false
         } catch (error) {
@@ -69,15 +69,21 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
     const getRooms = async () => {
         try {
             setIsLoading(true)
-            const token = JSON.parse(localStorage.getItem("token") || "")
+            const token = localStorage.getItem("token")
+            if (!token) {
+                console.log("Token not found")
+                return false
+            }
+
 
             const response = await axios.get(`${API_BASE_URL}/rooms/get-rooms`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
             })
-
+            console.log(response.data)
             if (response.data?.rooms) {
+                console.log(response.data?.rooms)
                 setRooms(response.data.rooms)
                 return true
             }
