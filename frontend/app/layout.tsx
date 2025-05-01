@@ -22,9 +22,11 @@ export default function RootLayout({
         <body className={inter.className}>
         <AuthProvider>
             <RoomProvider>
-                <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-                    {children}
-                </ThemeProvider>
+                <VideoProvider>
+                    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+                        {children}
+                    </ThemeProvider>
+                </VideoProvider>
             </RoomProvider>
         </AuthProvider>
         </body>
@@ -35,3 +37,4 @@ export default function RootLayout({
 
 import './globals.css'
 import {RoomProvider} from "@/components/room-provider";
+import {VideoProvider} from "@/components/video-provider";

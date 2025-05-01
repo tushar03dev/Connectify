@@ -36,8 +36,13 @@ connectDB();
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+import fs from 'fs';
+const dir = './videos';
+if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir);
+}
+
 const upload = multer();
-app.use(upload.none());
 
 // Routes
 app.use("/auth", authRoutes);

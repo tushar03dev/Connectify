@@ -9,11 +9,20 @@ import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/components/auth-provider"
-import { Pause, Play, Send, Share2, Volume2, VolumeX } from "lucide-react"
+import {Pause, Play, Plus, Send, Share2, Video, Volume2, VolumeX} from "lucide-react"
+import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} from "@/components/ui/card";
+import {router} from "next/client";
+import {useVideo} from "@/components/video-provider";
+import {Label} from "@/components/ui/label";
+import {Input} from "@/components/ui/input";
+import { io } from "socket.io-client";
 
 export default function RoomPage() {
   const { id } = useParams()
   const { user } = useAuth()
+  const [isUploading, setIsUploading] = useState(false)
+  const [videoFile, setVideoFile] = useState<File | null>(null)
+  const { video, videos, uploadVideo, getVideos, isLoading } = useVideo()
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolume] = useState(80)
   const [isMuted, setIsMuted] = useState(false)
@@ -33,6 +42,69 @@ export default function RoomPage() {
 
   // Mock [id] URL - in a real app, this would come from your backend0
   const videoUrl = "/placeholder-[id].mp4"
+
+  const handleVideoUpload = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!videoFile || !id) return
+
+    const success = await uploadVideo(videoFile, id as string)
+    if (success) {
+      alert("Video uploaded successfully!")
+      await getVideos(id as string)
+    } else {
+      alert("Video upload failed.")
+    }
+  }
+
+  // Initialize socket connection
+  useEffect(() => {
+    const socket = io(process.env.NEXT_PUBLIC_API_BASE_URL, {
+      query: { roomId: id },
+    });
+
+    socket.on("connect", () => {
+      console.log("Connected to socket server");
+    });
+
+    socket.on("vid-state", (state) => {
+      if (videoRef.current) {
+        if (videoRef.current.paused) {
+          videoRef.current.play();
+          setIsPlaying(true);
+        } else {
+          videoRef.current.pause();
+          setIsPlaying(false);
+        }
+      }
+    });
+
+    socket.on("progress-bar-clicked", (newTime) => {
+      if (videoRef.current) {
+        videoRef.current.currentTime = newTime;
+      }
+    });
+
+    socket.on("update-users", (userList) => {
+      // Handle user list update
+      console.log("User list updated:", userList);
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Disconnected from socket server");
+    });
+
+    socket.on("newMessage", (newMessage) => {
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (id) getVideos(id as string)
+  }, [id])
 
   useEffect(() => {
     // Scroll to bottom of chat when messages change
@@ -111,6 +183,8 @@ export default function RoomPage() {
     navigator.clipboard.writeText(window.location.href)
     alert("Room link copied to clipboard!")
   }
+
+
 
   return (
     <AuthCheck redirectTo="/login">
@@ -212,6 +286,81 @@ export default function RoomPage() {
               </form>
             </div>
           </div>
+
+          {/* Video List */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Recent Videos</h2>
+            {videos.length > 0 ? (
+                <div className="space-y-4">
+                  {videos.map((video) => (
+                      <Card key={video.filename}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <div className="rounded-full bg-primary/10 p-2">
+                                <Video className="h-5 w-5 text-primary" />
+                              </div>
+                              <div>
+                                <h3 className="font-medium">{video.filename}</h3>
+                                <p className="text-sm text-muted-foreground">
+                                  {videos.length} participants
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                                size="sm"
+                                // onClick={() => router.push(`/rooms/${room.code}`)}
+                            >
+                              Join
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                  ))}
+                </div>
+            ) : (
+                <Card>
+                  <CardContent className="p-6 text-center">
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                      <Plus className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground">
+                      You haven't uploaded any videos yet
+                    </p>
+                  </CardContent>
+                </Card>
+            )}
+          </div>
+
+          {/* Upload Video */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Upload a new video</CardTitle>
+              <CardDescription>
+                Select a file from your computer
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleVideoUpload}>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="room-name">Select Video File</Label>
+                  <Input
+                      type="file"
+                      id="videoFile"
+                      accept="video/*"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) setVideoFile(e.target.files[0])
+                      }}
+                  />
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? "Uploading..." : "Upload Video"}
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
         </div>
       </div>
     </AuthCheck>
