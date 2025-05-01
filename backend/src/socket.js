@@ -9,6 +9,7 @@ export const setupSocketIO = (io) => {
 
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            console.log("decoded", decoded);
             socket.userId = decoded.userId;
             socket.userName = decoded.userName;
             next();
@@ -44,6 +45,10 @@ export const setupSocketIO = (io) => {
         });
 
         socket.on("sendMessage", ({ roomId, message }) => {
+            if (!roomId || !message) return; // Avoid errors
+
+            console.log("Message received in room:", roomId, message);
+
             io.to(roomId).emit("receiveMessage", {
                 userName: socket.userName || "User",
                 message,

@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { v4 as uuidv4 } from 'uuid';
 
 import { useEffect, useRef, useState } from "react"
 import { useParams } from "next/navigation"
@@ -15,14 +16,15 @@ import {router} from "next/client";
 import {useVideo} from "@/components/video-provider";
 import {Label} from "@/components/ui/label";
 import {Input} from "@/components/ui/input";
-import { io } from "socket.io-client";
+import { io, Socket} from "socket.io-client";
+import {DefaultEventsMap} from "@socket.io/component-emitter"
 
 export default function RoomPage() {
-  const { id } = useParams()
-  const { user } = useAuth()
+  const {id} = useParams()
+  const {user} = useAuth()
   const [isUploading, setIsUploading] = useState(false)
   const [videoFile, setVideoFile] = useState<File | null>(null)
-  const { video, videos, uploadVideo, getVideos, isLoading } = useVideo()
+  const {video, videos, uploadVideo, getVideos, isLoading} = useVideo()
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolume] = useState(80)
   const [isMuted, setIsMuted] = useState(false)
@@ -30,12 +32,12 @@ export default function RoomPage() {
   const [duration, setDuration] = useState(100)
   const [message, setMessage] = useState("")
   const [messages, setMessages] = useState<
-    Array<{
-      id: string
-      user: string
-      text: string
-      timestamp: Date
-    }>
+      Array<{
+        id: string
+        user: string
+        text: string
+        timestamp: Date
+      }>
   >([])
   const videoRef = useRef<HTMLVideoElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
@@ -56,17 +58,26 @@ export default function RoomPage() {
     }
   }
 
+  const socketRef = useRef<Socket<DefaultEventsMap, DefaultEventsMap> | null>(null)
+
   // Initialize socket connection
   useEffect(() => {
-    const socket = io(process.env.NEXT_PUBLIC_API_BASE_URL, {
-      query: { roomId: id },
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    socketRef.current = io(process.env.NEXT_PUBLIC_API_BASE_URL, {
+      transports: ["websocket"],
+      auth: {
+        token: localStorage.getItem("token"),
+      },
     });
 
-    socket.on("connect", () => {
+    socketRef.current?.on("connect", () => {
       console.log("Connected to socket server");
+      socketRef.current?.emit("joinRoom", { roomId: id });
     });
 
-    socket.on("vid-state", (state) => {
+    socketRef.current.on("vid-state", (state) => {
       if (videoRef.current) {
         if (videoRef.current.paused) {
           videoRef.current.play();
@@ -78,27 +89,43 @@ export default function RoomPage() {
       }
     });
 
-    socket.on("progress-bar-clicked", (newTime) => {
+    socketRef.current.on("progress-bar-clicked", (newTime) => {
       if (videoRef.current) {
         videoRef.current.currentTime = newTime;
       }
     });
 
-    socket.on("update-users", (userList) => {
+    socketRef.current.on("update-users", (userList) => {
       // Handle user list update
       console.log("User list updated:", userList);
     });
 
-    socket.on("disconnect", () => {
+    socketRef.current.on("disconnect", () => {
       console.log("Disconnected from socket server");
     });
 
-    socket.on("newMessage", (newMessage) => {
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
+    // Fixed the message receiving handler
+    socketRef.current.on("receiveMessage", (incomingMessage) => {
+      console.log("Message received:", incomingMessage);
+
+      const parsedMessage = {
+        id: incomingMessage.message?.id || uuidv4(),
+        user: incomingMessage.userName || "Unknown User",
+        text: incomingMessage.message?.text || "",
+        timestamp: incomingMessage.message?.timestamp ? new Date(incomingMessage.message.timestamp) : new Date(),
+      };
+
+      console.log("Parsed message with ID:", parsedMessage.id);
+      setMessages((prevMessages) => {
+        if (prevMessages.some((m) => m.id === parsedMessage.id)) {
+          return prevMessages; // Avoid duplicate
+        }
+        return [...prevMessages, parsedMessage];
+      });
     });
 
     return () => {
-      socket.disconnect();
+      socketRef.current?.disconnect();
     };
   }, [id]);
 
@@ -166,25 +193,33 @@ export default function RoomPage() {
   }
 
   const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (message.trim() && user) {
+    e.preventDefault();
+
+    if (message.trim() && user && socketRef) {
       const newMessage = {
-        id: Date.now().toString(),
+        id: uuidv4(),
         user: user.name,
         text: message,
         timestamp: new Date(),
-      }
-      setMessages([...messages, newMessage])
-      setMessage("")
+      };
+
+      console.log(socketRef.current?.connected);  // should return true if connected
+      console.log("Sending message:", newMessage, "to room:", id);  // Check message and roomId
+      // Emit the message to the server with roomId
+      socketRef.current?.emit("sendMessage", {
+        roomId: id,         // ensure `id` is defined (room ID)
+        message: newMessage,
+      });
+
+      setMessage("");
     }
-  }
+  };
+
 
   const handleShareRoom = () => {
     navigator.clipboard.writeText(window.location.href)
     alert("Room link copied to clipboard!")
   }
-
-
 
   return (
     <AuthCheck redirectTo="/login">
@@ -197,7 +232,10 @@ export default function RoomPage() {
           </Button>
         </header>
 
+
         <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+
+          {/* Video Box */}
           <div className="flex flex-col space-y-4">
             <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
               <video
@@ -236,6 +274,8 @@ export default function RoomPage() {
             </div>
           </div>
 
+
+          {/* Chat Box */}
           <div className="flex flex-col rounded-lg border bg-card shadow-sm">
             <div className="border-b p-3">
               <h2 className="font-semibold">Chat</h2>
@@ -247,43 +287,54 @@ export default function RoomPage() {
             >
               {messages.length > 0 ? (
                 <div className="space-y-4">
-                  {messages.map((msg) => (
+                  {messages.map((msg) => {
+                      console.log("Rendering message with id:", msg.id);
+                      return (
                     <div key={msg.id} className="flex flex-col">
                       <div className="flex items-center space-x-2">
                         <span className="font-medium">{msg.user}</span>
                         <span className="text-xs text-muted-foreground">
-                          {msg.timestamp.toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                           {msg.timestamp ? msg.timestamp.toLocaleTimeString([], {
+                             hour: "2-digit",
+                             minute: "2-digit",
+                           }) : ""}
                         </span>
                       </div>
                       <p className="mt-1">{msg.text}</p>
                     </div>
-                  ))}
+              );
+              })}
                 </div>
               ) : (
                 <div className="flex h-full items-center justify-center text-muted-foreground">No messages yet</div>
               )}
             </div>
             <div className="border-t p-3">
-              <form onSubmit={handleSendMessage} className="flex space-x-2">
-                <Textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Type a message..."
-                  className="min-h-[40px] flex-1 resize-none"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSendMessage(e)
-                    }
+              <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSendMessage(e); // Pass the event here
                   }}
+                  className="flex space-x-2"
+              >
+                <Textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Type a message..."
+                    className="min-h-[40px] flex-1 resize-none"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        // Use the form's requestSubmit to trigger the onSubmit handler
+                        e.currentTarget.form?.requestSubmit(); // This calls the form's onSubmit
+                      }
+                    }}
                 />
                 <Button type="submit" size="icon" disabled={!message.trim()}>
                   <Send className="h-4 w-4" />
                 </Button>
               </form>
+
             </div>
           </div>
 
@@ -293,7 +344,7 @@ export default function RoomPage() {
             {videos.length > 0 ? (
                 <div className="space-y-4">
                   {videos.map((video) => (
-                      <Card key={video.filename}>
+                      <Card key={video.originalName}>
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-4">
@@ -301,17 +352,15 @@ export default function RoomPage() {
                                 <Video className="h-5 w-5 text-primary" />
                               </div>
                               <div>
-                                <h3 className="font-medium">{video.filename}</h3>
-                                <p className="text-sm text-muted-foreground">
-                                  {videos.length} participants
-                                </p>
+                                <h3 className="font-medium">{video.originalName}</h3>
+
                               </div>
                             </div>
                             <Button
                                 size="sm"
                                 // onClick={() => router.push(`/rooms/${room.code}`)}
                             >
-                              Join
+                              Play
                             </Button>
                           </div>
                         </CardContent>
