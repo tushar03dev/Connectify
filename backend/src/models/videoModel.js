@@ -13,6 +13,11 @@ const videoSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    roomId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Room',
+        required: true
+    }
 }, { timestamps: true });
 
 const Video = mongoose.model('Video', videoSchema);

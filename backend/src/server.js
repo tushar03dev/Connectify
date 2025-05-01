@@ -10,6 +10,7 @@ import authRoutes from "./routes/authRoutes.js";
 import otpRoutes from "./routes/otpRoutes.js";
 import roomRoutes from "./routes/roomRoutes.js";
 import {setupSocketIO} from "./socket.js";
+import videoRoutes from "./routes/videoRoutes.js";
 
 
 dotenv.config();
