@@ -28,6 +28,9 @@ const io = new Server(server, {
 // Initialize your socket logic
 setupSocketIO(io);
 
+// Database Connection
+connectDB();
+
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
@@ -35,13 +38,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const upload = multer();
 app.use(upload.none());
 
-// Database Connection
-connectDB();
-
 // Routes
 app.use("/auth", authRoutes);
 app.use("/otp", otpRoutes);
 app.use("/rooms", roomRoutes);
+app.use('/video', videoRoutes);
 
 // Start Server
 const PORT = process.env.PORT || 5200;
