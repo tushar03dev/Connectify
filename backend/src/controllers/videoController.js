@@ -73,7 +73,7 @@ export const getVideos = async (req, res) => {
         return res.status(404).json({message: 'Room not found'});
     }
 
-    const videos = await Video.find({ roomId: room._id }).select('_id originalName room');
+    const videos = await Video.find({ roomId: room._id });
     if (!videos) {
         return res.status(404).json({message: 'Video not found'});
     }

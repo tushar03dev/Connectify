@@ -10,6 +10,8 @@ type Video = {
     _id : string
     originalName: string
     room: string
+    filePath: string
+    streamingUrl: string
 }
 
 type VideoContextType = {
@@ -95,7 +97,11 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
 
 
             if (response.data?.videos) {
-                setVideos(response.data.videos)
+                setVideos(response.data.videos.map((video: any) => ({
+                    ...video,
+                    // Optionally construct streaming URL here
+                    streamingUrl: `${process.env.NEXT_PUBLIC_API_BASE_URL}/video/play/${video._id}`,
+                })))
                 return true
             }
             return false

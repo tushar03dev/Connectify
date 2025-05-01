@@ -11,6 +11,6 @@ router.post('/upload',upload.single('video'),uploadVideo);
 
 router.get('/get-videos/:roomCode',authenticateToken,getVideos);
 
-router.get("/:id", streamVideoById);
+router.get("/play/:id", streamVideoById);
 
 export default router;

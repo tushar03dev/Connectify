@@ -72,14 +72,28 @@ export const setupSocketIO = (io) => {
             }
         });
 
-        // Sync Video State (play/pause)
-        socket.on("vid-state", ({ roomId, vidState }) => {
-            io.to(roomId).emit("vid-state", vidState);
+        socket.on('video-selected', ({ roomId, videoUrl }) => {
+            if (roomId && videoUrl) {
+                io.to(roomId).emit('video-selected', { videoUrl });
+            } else {
+                console.error('Invalid video-selected payload:', { roomId, videoUrl });
+            }
         });
 
-        // Sync Progress Bar (seek)
-        socket.on("progress-bar-clicked", ({ roomId, newTime }) => {
-            io.to(roomId).emit("progress-bar-clicked", newTime);
+        socket.on('vid-state', ({ roomId, isPlaying, videoUrl, currentTime }) => {
+            if (roomId && typeof isPlaying === 'boolean' && videoUrl && typeof currentTime === 'number') {
+                io.to(roomId).emit('vid-state', { isPlaying, videoUrl, currentTime });
+            } else {
+                console.error('Invalid vid-state payload:', { roomId, isPlaying, videoUrl, currentTime });
+            }
+        });
+
+        socket.on('progress-bar-clicked', ({ roomId, newTime, videoUrl }) => {
+            if (roomId && typeof newTime === 'number' && videoUrl) {
+                io.to(roomId).emit('progress-bar-clicked', { newTime, videoUrl });
+            } else {
+                console.error('Invalid progress-bar-clicked payload:', { roomId, newTime, videoUrl });
+            }
         });
 
         socket.on("disconnect", () => {
