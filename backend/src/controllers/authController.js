@@ -67,7 +67,7 @@ export const completeSignUp = async (req, res) => {
             tempUser = null;
 
             // Generate JWT token
-            const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+            const token = jwt.sign({ userId: user._id,  userName: user.name }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
             // Respond with token and success message
             res.status(201).json({ token, message: 'OTP verified successfully.User signed up successfully.' });
@@ -97,7 +97,7 @@ export const completeSignUp = async (req, res) => {
             return res.status(400).send('Invalid password');
         }
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        const token = jwt.sign({ userId: user._id, userName: user.name}, process.env.JWT_SECRET, { expiresIn: '1d' });
         res.json({ token, name:user.name });
     } catch (err) {
         console.error('Error during sign-in:', err);
