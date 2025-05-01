@@ -6,12 +6,17 @@ export const uploadVideo = async (req, res) => {
     try {
         // Extract video file details from the request
         const { filename, path: filePath } = req.file;
-
+        const {code} = req.body;
+        const room = await Room.findOne({code:code});
+        if (!room) {
+            return res.status(400).send({error: 'Room not found'});
+        }
         // Create a new video record in the database
         const video = new Video({
             filename,
             filePath,
             originalName: req.file.originalname,
+            roomId: room._id,
         });
 
         await video.save(); // Save video metadata to MongoDB
