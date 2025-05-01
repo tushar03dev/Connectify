@@ -16,6 +16,7 @@ type RoomContextType = {
     room: Room | null
     rooms: Room[]
     createRoom: (name: string, code: string) => Promise<Boolean>
+    joinRoom: (code: string) => Promise<Boolean>
     getRooms: () => Promise<boolean>
     isLoading: boolean
 }
@@ -24,12 +25,13 @@ const RoomContext = createContext<RoomContextType>({
     room: null,
     rooms: [],
     createRoom: async () => false,
+    joinRoom: async () => false,
     getRooms: async () => false,
     isLoading: true,
 })
 
 export function RoomProvider({ children }: { children: React.ReactNode }) {
-    const [room, setRoom] = useState<Room | null>(null)
+    const [room ] = useState<Room | null>(null)
     const [rooms, setRooms] = useState<Room[]>([])
     const [isLoading, setIsLoading] = useState(false)
 
@@ -53,10 +55,40 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
                 }
             )
 
-            if (response.data?.room) return true
-            return false
+            return !!response.data?.room;
+
         } catch (error) {
             console.error("Error creating room:", error)
+            return false
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const joinRoom = async (code: string) => {
+        try {
+
+            setIsLoading(true)
+            const token = localStorage.getItem("token")
+            if (!token) {
+                console.log("token not found")
+                return false
+            }
+
+            const response = await axios.post(
+                `${API_BASE_URL}/rooms/join`,
+                { code },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            )
+
+            return !!response.data?.room;
+
+        } catch (error) {
+            console.error("Error joining room:", error)
             return false
         } finally {
             setIsLoading(false)
@@ -95,7 +127,7 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
 
     return (
         <RoomContext.Provider
-            value={{ room, rooms, createRoom, getRooms, isLoading }}
+            value={{ room, rooms, createRoom, getRooms, joinRoom, isLoading }}
         >
             {children}
         </RoomContext.Provider>

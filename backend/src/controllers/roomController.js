@@ -23,8 +23,11 @@ export const joinRoom = async (req, res) => {
         return res.status(404).json({ message: 'Room not found' });
     }
 
-    room.members.push(userId);
-    await room.save();
+    if(!room.members.includes(userId)){
+        room.members.push(userId);
+        await room.save();
+    }
+
     res.json({ message: 'Joined successfully', room });
 }
 
