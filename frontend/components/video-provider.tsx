@@ -7,8 +7,11 @@ import axios from "axios"
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
 type Video = {
-    filename: string
+    _id : string
+    originalName: string
     room: string
+    filePath: string
+    streamingUrl: string
 }
 
 type VideoContextType = {
@@ -82,8 +85,9 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
                 return false;
             }
 
+
             const response = await axios.get(
-                `${API_BASE_URL}/video/room/${roomId}`,
+                `${API_BASE_URL}/video/get-videos/${roomId}`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -91,15 +95,24 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
                 }
             );
 
+
             if (response.data?.videos) {
-                setVideos(response.data.videos)
+                setVideos(response.data.videos.map((video: any) => ({
+                    ...video,
+                    // Optionally construct streaming URL here
+                    streamingUrl: `${process.env.NEXT_PUBLIC_API_BASE_URL}/video/play/${video._id}`,
+                })))
                 return true
             }
             return false
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error fetching videos:", error);
-            return false
+            if (error.response) {
+                console.log("Error response data:", error.response.data);
+                console.log("Status:", error.response.status);
+            }
+            return false;
         } finally {
             setIsLoading(false)
         }
