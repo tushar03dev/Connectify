@@ -7,7 +7,7 @@ import { AuthCheck } from "@/components/auth-check"
 
 export const metadata: Metadata = {
   title: "Connectify - Watch Together",
-  description: "Synchronize video playback across multiple devices",
+  description: "Synchronize [id] playback across multiple devices",
 }
 
 export default function Home() {

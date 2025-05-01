@@ -23,21 +23,27 @@ export default function RoomsPage() {
   const [roomName, setRoomName] = useState("")
   const router = useRouter()
   const [isCreating, setIsCreating] = useState(false)
-  const { rooms, createRoom, getRooms, isLoading } = useRoom()
+  const [roomCode, setRoomCode] = useState("")
+  const { rooms, createRoom, getRooms, joinRoom, isLoading } = useRoom()
 
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsCreating(true)
 
-    const roomId = "room-" + Math.random().toString(36).substr(2, 9);
+    const roomId = Math.random().toString(36).substr(2, 9)
     const success = await createRoom(roomName,roomId)
 
-    console.log("success", success)
+    if (success === true) router.push(`/rooms/${roomId}`)
+    setIsCreating(false)
+  }
 
-    if (success && typeof success === "object") {
-      const newRoom = rooms.find((r) => r.name === roomName)
-      if (newRoom) router.push(`/rooms/${newRoom.code}`)
-    }
+  const handleJoinRoom = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsCreating(true)
+
+    const success = await joinRoom(roomCode)
+    if (success === true) router.push(`/rooms/${roomCode}`)
+
     setIsCreating(false)
   }
 
@@ -85,6 +91,7 @@ export default function RoomsPage() {
               </form>
             </Card>
 
+
             {/* Room List */}
             <div className="space-y-4">
               <h2 className="text-xl font-semibold">Recent Rooms</h2>
@@ -129,6 +136,36 @@ export default function RoomsPage() {
                   </Card>
               )}
             </div>
+
+            {/* Join Room */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Join a Room</CardTitle>
+                <CardDescription>
+                  Connect to an existing viewing session
+                </CardDescription>
+              </CardHeader>
+
+              <form onSubmit={handleJoinRoom}>
+                <CardContent>
+                  <div className="space-y-2">
+                    <Label htmlFor="room-name">Room Code</Label>
+                    <Input
+                        id="room-code"
+                        placeholder="e.g., room-123..."
+                        value={roomCode}
+                        onChange={(e) => setRoomCode(e.target.value)}
+                        required
+                    />
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit">
+                    Join Room
+                  </Button>
+                </CardFooter>
+                </form>
+            </Card>
           </div>
         </div>
       </AuthCheck>

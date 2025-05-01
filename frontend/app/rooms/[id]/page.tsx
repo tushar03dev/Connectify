@@ -12,7 +12,7 @@ import { useAuth } from "@/components/auth-provider"
 import { Pause, Play, Send, Share2, Volume2, VolumeX } from "lucide-react"
 
 export default function RoomPage() {
-  const { code } = useParams()
+  const { id } = useParams()
   const { user } = useAuth()
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolume] = useState(80)
@@ -31,8 +31,8 @@ export default function RoomPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
 
-  // Mock video URL - in a real app, this would come from your backend0
-  const videoUrl = "/placeholder-video.mp4"
+  // Mock [id] URL - in a real app, this would come from your backend0
+  const videoUrl = "/placeholder-[id].mp4"
 
   useEffect(() => {
     // Scroll to bottom of chat when messages change
@@ -116,7 +116,7 @@ export default function RoomPage() {
     <AuthCheck redirectTo="/login">
       <div className="container mx-auto grid min-h-screen grid-rows-[auto_1fr] gap-4 p-4">
         <header className="flex items-center justify-between py-4">
-          <h1 className="text-2xl font-bold">Room: {code}</h1>
+          <h1 className="text-2xl font-bold">Room: {id}</h1>
           <Button variant="outline" onClick={handleShareRoom}>
             <Share2 className="mr-2 h-4 w-4" />
             Share Room
