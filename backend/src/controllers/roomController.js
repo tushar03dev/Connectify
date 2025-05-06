@@ -41,6 +41,16 @@ export const getRooms = async (req, res) => {
     res.status(200).json({rooms:rooms});
 }
 
+export const deleteRoom = async (req, res) => {
+    const { code } = req.params.roomId;
+    const room = await Room.findOne({ code });
+    if (!room) {
+        return res.status(404).json({ message: 'Room not found' });
+    }
+    await room.deleteOne();
+    res.json({ message: 'Room deleted successfully' });
+}
+
 export const setupSocketIO = (io) => {
     io.on("connection", (socket) => {
         console.log("A user connected:", socket.id);
