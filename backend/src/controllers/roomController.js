@@ -41,44 +41,14 @@ export const getRooms = async (req, res) => {
     res.status(200).json({rooms:rooms});
 }
 
-export const setupSocketIO = (io) => {
-    io.on("connection", (socket) => {
-        console.log("A user connected:", socket.id);
+export const deleteRoom = async (req, res) => {
+    const { code } = req.params.roomId;
+    const room = await Room.findOne({ code });
+    if (!room) {
+        return res.status(404).json({ message: 'Room not found' });
+    }
+    await room.deleteOne();
+    res.json({ message: 'Room deleted successfully' });
+}
 
-        socket.on("joinRoom", async ({ roomId, user }) => {
-            let room = await Room.findOne({ code: roomId });
 
-            if (!room) {
-                room = new Room({ code: roomId, users: [user] });
-            } else {
-                if (!room.users.includes(user)) {
-                    room.users.push(user);
-                }
-            }
-            await room.save();
-
-            socket.join(roomId);
-            io.to(roomId).emit("roomUsers", room.users);
-        });
-
-        socket.on("sendMessage", ({ roomId, message }) => {
-            io.to(roomId).emit("receiveMessage", message);
-        });
-
-        socket.on("leaveRoom", async ({ roomId, user }) => {
-            const room = await Room.findOne({ code: roomId });
-
-            if (room) {
-                room.users = room.users.filter((u) => u !== user);
-                await room.save();
-
-                socket.leave(roomId);
-                io.to(roomId).emit("roomUsers", room.users);
-            }
-        });
-
-        socket.on("disconnect", () => {
-            console.log("User disconnected:", socket.id);
-        });
-    });
-};
