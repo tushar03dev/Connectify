@@ -37,6 +37,19 @@ export const streamVideoById = async (req, res) => {
     }
 };
 
+export const deleteVideo = async (req, res) => {
+    try {
+        const videoId = req.params.id;
+        const video = await Video.findByIdAndDelete(videoId);
+        if (!video) return res.status(404).send("Video not found");
+        res.status(200).send("Video was deleted successfully");
+    } catch (error) {
+        console.error("Error deleting video:", error);
+        res.status(500).send("Internal Server Error");
+    }
+}
+
+
 export const uploadVideo = async (req, res) => {
     try {
         console.log("REQ.FILE", req.file);
