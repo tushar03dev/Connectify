@@ -19,6 +19,8 @@ type RoomContextType = {
     joinRoom: (code: string) => Promise<Boolean>
     getRooms: () => Promise<boolean>
     isLoading: boolean
+    selectedRoom: Room | null
+    setSelectedRoom: (room: Room | null) => void
 }
 
 const RoomContext = createContext<RoomContextType>({
@@ -28,10 +30,14 @@ const RoomContext = createContext<RoomContextType>({
     joinRoom: async () => false,
     getRooms: async () => false,
     isLoading: true,
+    selectedRoom: null,
+    setSelectedRoom: () => {},
+
 })
 
 export function RoomProvider({ children }: { children: React.ReactNode }) {
     const [room ] = useState<Room | null>(null)
+    const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
     const [rooms, setRooms] = useState<Room[]>([])
     const [isLoading, setIsLoading] = useState(false)
 
@@ -55,7 +61,12 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
                 }
             )
 
-            return !!response.data?.room;
+            if (response.data?.room) {
+                setSelectedRoom(response.data.room);
+                console.log(selectedRoom?.name)
+                return true;
+            }
+            return false;
 
         } catch (error) {
             console.error("Error creating room:", error)
@@ -85,7 +96,12 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
                 }
             )
 
-            return !!response.data?.room;
+            if (response.data?.room) {
+                setSelectedRoom(response.data.room)
+                return true;
+            }
+            return false;
+
 
         } catch (error) {
             console.error("Error joining room:", error)
@@ -112,7 +128,6 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
             })
 
             if (response.data?.rooms) {
-
                 setRooms(response.data.rooms)
                 return true
             }
@@ -127,7 +142,7 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
 
     return (
         <RoomContext.Provider
-            value={{ room, rooms, createRoom, getRooms, joinRoom, isLoading }}
+            value={{ room, rooms, createRoom, getRooms, joinRoom, isLoading, selectedRoom, setSelectedRoom }}
         >
             {children}
         </RoomContext.Provider>

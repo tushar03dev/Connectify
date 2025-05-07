@@ -1,6 +1,6 @@
 import express from 'express';
 import {authenticateToken} from "../middlewares/authMiddleware.js";
-import {getVideos, streamVideoById, uploadVideo} from "../controllers/videoController.js";
+import {deleteVideo, getVideos, streamVideoById, uploadVideo} from "../controllers/videoController.js";
 import upload from "../config/multer.js";
 
 const router = express.Router();

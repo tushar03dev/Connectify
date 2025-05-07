@@ -16,10 +16,12 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { io, Socket } from "socket.io-client";
 import { DefaultEventsMap } from "@socket.io/component-emitter"
+import {useRoom} from "@/components/room-provider";
 
 export default function RoomPage() {
   const { id } = useParams()
   const { user } = useAuth()
+  const { selectedRoom } = useRoom()
   const [isUploading, setIsUploading] = useState(false)
   const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null)
@@ -257,7 +259,7 @@ export default function RoomPage() {
       <AuthCheck redirectTo="/login">
         <div className="container mx-auto grid min-h-screen grid-rows-[auto_1fr] gap-4 p-4">
           <header className="flex items-center justify-between py-4">
-            <h1 className="text-2xl font-bold">Room: {id}</h1>
+            <h1 className="text-2xl font-bold">Room: {selectedRoom?.name}</h1>
             <Button variant="outline" onClick={handleShareRoom}>
               <Share2 className="mr-2 h-4 w-4" />
               Share Room
