@@ -24,7 +24,7 @@ export default function RoomsPage() {
   const router = useRouter()
   const [isCreating, setIsCreating] = useState(false)
   const [roomCode, setRoomCode] = useState("")
-  const { rooms, createRoom, getRooms, joinRoom, isLoading } = useRoom()
+  const { rooms, createRoom, getRooms, joinRoom, isLoading, setSelectedRoom } = useRoom()
 
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,7 +33,8 @@ export default function RoomsPage() {
     const roomId = Math.random().toString(36).substr(2, 9)
     const success = await createRoom(roomName,roomId)
 
-    if (success === true) router.push(`/rooms/${roomId}`)
+    if (success === true){
+      router.push(`/rooms/${roomId}`)}
     setIsCreating(false)
   }
 
@@ -114,7 +115,10 @@ export default function RoomsPage() {
                               </div>
                               <Button
                                   size="sm"
-                                  onClick={() => router.push(`/rooms/${room.code}`)}
+                                  onClick={() =>{
+                                    router.push(`/rooms/${room.code}`)
+                                    setSelectedRoom(room);
+                                  }}
                               >
                                 Join
                               </Button>
