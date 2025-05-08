@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Plus, Video } from "lucide-react"
+import {Plus, Video, X} from "lucide-react"
 import {useRoom} from "@/components/room-provider";
 
 export default function RoomsPage() {
@@ -99,7 +99,15 @@ export default function RoomsPage() {
               {rooms.length > 0 ? (
                   <div className="space-y-4">
                     {rooms.map((room) => (
-                        <Card key={room.code}>
+                        <Card key={room.code} className="relative">
+                          {/* Delete Button */}
+                          <button
+                              onClick={() => {}}
+                              className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-full bg-muted hover:bg-destructive/20 transition-colors"
+                          >
+                            <X className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                          </button>
+
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-4">
@@ -115,8 +123,8 @@ export default function RoomsPage() {
                               </div>
                               <Button
                                   size="sm"
-                                  onClick={() =>{
-                                    router.push(`/rooms/${room.code}`)
+                                  onClick={() => {
+                                    router.push(`/rooms/${room.code}`);
                                     setSelectedRoom(room);
                                   }}
                               >
@@ -126,6 +134,7 @@ export default function RoomsPage() {
                           </CardContent>
                         </Card>
                     ))}
+
                   </div>
               ) : (
                   <Card>
