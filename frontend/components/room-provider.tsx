@@ -10,6 +10,7 @@ type Room = {
     code: string
     name: string
     members: string[]
+    _id: string
 }
 
 type RoomContextType = {
@@ -142,26 +143,29 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
         }
     }
 
-    const deleteRoom = async (code: string) => {
+    const deleteRoom = async (roomId: string) => {
         try {
+            console.log(roomId)
             const token = localStorage.getItem("token")
             if (!token) {
                 console.log("token not found")
                 return false
             }
 
-            const response = await axios.delete(`${API_BASE_URL}/rooms/delete-room/${code}`, {
+            const response = await axios.delete(`${API_BASE_URL}/rooms/delete-room/${roomId}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 }
             })
 
-            if (response.status !== 200) {
+            if (response.status === 200) {
                 console.log("Error caused at server in deleting room")
-                return false
+                setRooms((prevRooms) => prevRooms.filter((room) => room._id !== roomId))
+                return true
             }
 
-            return true
+            setRooms((prevRooms) => prevRooms.filter((room) => room._id !== roomId))
+            return false
         } catch (error) {
             console.error("Error deleting room from the server:", error)
             return false

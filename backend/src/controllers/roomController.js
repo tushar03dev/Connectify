@@ -37,18 +37,22 @@ export const getRooms = async (req, res) => {
     const rooms = await Room.find({
         members: userId,
     });
-
+    console.log(rooms);
     res.status(200).json({rooms:rooms});
 }
 
 export const deleteRoom = async (req, res) => {
-    const { code } = req.params.roomId;
-    const room = await Room.findOne({ code });
-    if (!room) {
-        return res.status(404).json({ message: 'Room not found' });
+    const roomId = req.params.roomId; // Fix destructuring
+    try {
+        const room = await Room.findByIdAndDelete(roomId); // Fix query for MongoDB ObjectId
+        if (!room) {
+            return res.status(404).json({ message: 'Room not found' });
+        }
+        return res.status(200).json({ success: true });
+    } catch (error) {
+        console.error('Error deleting room:', error);
+        return res.status(500).json({ message: 'Server error' });
     }
-    await room.deleteOne();
-    res.json({ message: 'Room deleted successfully' });
-}
+};
 
 
