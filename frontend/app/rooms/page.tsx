@@ -103,13 +103,15 @@ export default function RoomsPage() {
                           {/* Delete Button */}
                           <button
                               onClick={() => {}}
-                              className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-full bg-muted hover:bg-destructive/20 transition-colors"
+                              className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-full bg-muted hover:bg-white transition-colors duration-200"
                           >
-                            <X className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                            <X className="w-4 h-4 text-muted-foreground hover:text-red-500 transition-colors duration-200"
+                               strokeWidth={2.5}
+                            />
                           </button>
 
                           <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between gap-2"> {/* Added gap-2 */}
                               <div className="flex items-center space-x-4">
                                 <div className="rounded-full bg-primary/10 p-2">
                                   <Video className="h-5 w-5 text-primary" />
@@ -127,6 +129,7 @@ export default function RoomsPage() {
                                     router.push(`/rooms/${room.code}`);
                                     setSelectedRoom(room);
                                   }}
+                                  className="transform -translate-x-7"
                               >
                                 Join
                               </Button>
