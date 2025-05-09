@@ -21,6 +21,7 @@ type RoomContextType = {
     isLoading: boolean
     selectedRoom: Room | null
     setSelectedRoom: (room: Room | null) => void
+    deleteRoom: (code: string) => Promise<Boolean>
 }
 
 const RoomContext = createContext<RoomContextType>({
@@ -32,6 +33,7 @@ const RoomContext = createContext<RoomContextType>({
     isLoading: true,
     selectedRoom: null,
     setSelectedRoom: () => {},
+    deleteRoom: async () => false,
 
 })
 
@@ -140,9 +142,36 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
         }
     }
 
+    const deleteRoom = async (code: string) => {
+        try {
+            const token = localStorage.getItem("token")
+            if (!token) {
+                console.log("token not found")
+                return false
+            }
+
+            const response = await axios.delete(`${API_BASE_URL}/rooms/delete-room/${code}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                }
+            })
+
+            if (response.status !== 200) {
+                console.log("Error caused at server in deleting room")
+                return false
+            }
+
+            return true
+        } catch (error) {
+            console.error("Error deleting room from the server:", error)
+            return false
+        }
+
+    }
+
     return (
         <RoomContext.Provider
-            value={{ room, rooms, createRoom, getRooms, joinRoom, isLoading, selectedRoom, setSelectedRoom }}
+            value={{ room, rooms, createRoom, getRooms, joinRoom, isLoading, selectedRoom, setSelectedRoom, deleteRoom }}
         >
             {children}
         </RoomContext.Provider>
