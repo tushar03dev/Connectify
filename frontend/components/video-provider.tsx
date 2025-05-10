@@ -19,6 +19,7 @@ type VideoContextType = {
     videos: Video[]
     uploadVideo: (file: File, roomCode: string) => Promise<Boolean>
     getVideos: (roomId : string) => Promise<boolean>
+    deleteVideo: (videoId : string) => Promise<boolean>
     isLoading: boolean
 }
 
@@ -27,6 +28,7 @@ const VideoContext = createContext<VideoContextType>({
     videos: [],
     uploadVideo: async () => false,
     getVideos: async () => false,
+    deleteVideo: async () => false,
     isLoading: true,
 })
 
@@ -44,8 +46,6 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
                 console.log("Token not found");
                 return false;
             }
-
-            console.log("roomId in frontend before upload:", roomCode);
 
             const formData = new FormData();
             formData.append("video", file);
@@ -118,10 +118,37 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    const deleteVideo = async (videoId: string) => {
+        try {
+            const token = localStorage.getItem("token")
+            if (!token) {
+                console.log("token not found")
+                return false
+            }
+
+            const response = await axios.delete(`${API_BASE_URL}/video/delete/${videoId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                }
+            })
+
+            if (response.status === 200) {
+
+                setVideos((prevVideos) => prevVideos.filter((video) => video._id !== videoId))
+                return true
+            }
+            console.log("Error caused at server in deleting video")
+            return false
+        } catch (error) {
+            console.error("Error deleting room from the server:", error)
+            return false
+        }
+    };
+
 
     return (
         <VideoContext.Provider
-            value={{ video, videos, uploadVideo, getVideos, isLoading }}
+            value={{ video, videos, uploadVideo, getVideos, isLoading, deleteVideo }}
         >
             {children}
         </VideoContext.Provider>

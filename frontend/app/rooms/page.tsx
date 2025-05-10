@@ -124,7 +124,7 @@ export default function RoomsPage() {
                               className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-full bg-muted hover:bg-white transition-colors duration-200"
                           >
                             <X
-                                className="w-4 h-4 text-muted-foreground hover:text-red-500 transition-colors duration-200"
+                                className="w-4 h-4 text-white text-muted-foreground hover:text-red-500 transition-colors duration-200"
                                 strokeWidth={2.5}
                             />
                           </button>
