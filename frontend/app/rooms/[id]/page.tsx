@@ -25,7 +25,7 @@ export default function RoomPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null)
-  const { video, videos, uploadVideo, getVideos, isLoading } = useVideo()
+  const { video, videos, uploadVideo, getVideos, isLoading, deleteVideo } = useVideo()
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolume] = useState(80)
   const [isMuted, setIsMuted] = useState(false)
@@ -255,14 +255,15 @@ export default function RoomPage() {
     alert("Room link copied to clipboard!")
   }
 
-  const handleDeleteClick = async (roomId: string) => {
+  const handleDeleteVideo = async (videoId: string) => {
+    const success = await deleteVideo(videoId)
+    return success
+  }
+
+  const handleDeleteClick = async (videoId: string) => {
     const confirmed = window.confirm("Are you sure you want to delete this video?")
     if (confirmed) {
-      const success = await handleDeleteVideo(roomId)
-      if (success) {
-        // No need to call getRooms; the useRoom context should handle state updates
-        // If rooms state doesn't update automatically, you may need to notify the context
-      }
+      const success = await handleDeleteVideo(videoId)
     }
   }
 
@@ -425,7 +426,7 @@ export default function RoomPage() {
                     </CardContent>
                     {/* Delete Button */}
                     <button
-                        onClick={() => {() => handleDeleteClick(video._id)}}
+                        onClick={() => handleDeleteClick(video._id)}
                         className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-full bg-muted hover:bg-gray-200 transition-colors duration-200"
                         aria-label={`Delete ${video.originalName}`}
                     >
