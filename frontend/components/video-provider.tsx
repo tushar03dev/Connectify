@@ -47,8 +47,6 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
                 return false;
             }
 
-            console.log("roomId in frontend before upload:", roomCode);
-
             const formData = new FormData();
             formData.append("video", file);
             formData.append("roomCode", roomCode);
@@ -135,11 +133,11 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
             })
 
             if (response.status === 200) {
-                console.log("Error caused at server in deleting room")
+
                 setVideos((prevVideos) => prevVideos.filter((video) => video._id !== videoId))
                 return true
             }
-
+            console.log("Error caused at server in deleting video")
             return false
         } catch (error) {
             console.error("Error deleting room from the server:", error)

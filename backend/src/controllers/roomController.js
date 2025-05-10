@@ -42,9 +42,9 @@ export const getRooms = async (req, res) => {
 }
 
 export const deleteRoom = async (req, res) => {
-    const roomId = req.params.roomId; // Fix destructuring
+    const roomId = req.params.roomId;
     try {
-        const room = await Room.findByIdAndDelete(roomId); // Fix query for MongoDB ObjectId
+        const room = await Room.findByIdAndDelete(roomId);
         if (!room) {
             return res.status(404).json({ message: 'Room not found' });
         }
