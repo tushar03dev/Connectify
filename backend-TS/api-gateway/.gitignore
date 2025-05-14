@@ -1,0 +1,15 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+
+# Logs
+*.log
+
+# TypeScript output (if applicable)
+dist/
+build/
+
+# Other sensitive files or configuration
+*.local
