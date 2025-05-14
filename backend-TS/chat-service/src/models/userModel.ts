@@ -15,4 +15,4 @@ const UserSchema = new mongoose.Schema<IUser>({
     videos:{type:[mongoose.Types.ObjectId]}
 })
 
-const User = mongoose.model<IUser>('User',UserSchema);
+const User = mongoose.model<IUser>('users',UserSchema);
