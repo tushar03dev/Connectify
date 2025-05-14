@@ -1,35 +1,46 @@
-import express from "express";
-import { createServer } from "http";
-import { startSocketServer } from "./socketHandler";
-import connectDB from "./config/db";
-import chatRoutes from "./routes/chatRoutes";
 import dotenv from "dotenv";
+import express from "express";
+import cors from "cors";
+import http from "http";
+import { Server } from "socket.io";
+import bodyParser from "body-parser";
 import multer from "multer";
-import {chatConsumer} from "./consumers/chatConsumer";
-import adminRoutes from "./routes/adminRoutes";
-import socketRoutes from "./routes/socketRoutes";
+import connectDB from "./config/db.js";
+import roomRoutes from "./routes/roomRoutes.js";
+import {setupSocketIO} from "./socket.js";
+import videoRoutes from "./routes/videoRoutes.js";
+
 
 dotenv.config();
-const app = express();
-const server = createServer(app); // Create an HTTP server
 
-// Setup WebSocket and RabbitMQ consumer
-connectDB().then(() => {
-    chatConsumer();
-    startSocketServer();
+const app = express();
+
+const server = http.createServer(app);
+
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"],
+    },
 });
 
+// Initialize your socket logic
+setupSocketIO(io);
+
+// Database Connection
+connectDB();
+
 // Middleware
-app.use(express.json());
+app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// Middleware to handle form-data
-const upload = multer();
-app.use(upload.none());
+// Routes
+app.use("/rooms", roomRoutes);
+app.use('/video', videoRoutes);
 
-app.use('/admin',adminRoutes);
-app.use('/chat', chatRoutes);
-app.use("/socket", socketRoutes);
-
-server.listen(process.env.PORT, () => {
-    console.log(`Chat Server running on http://localhost:${process.env.PORT}`);
+// Start Server
+const PORT = process.env.PORT || 5200;
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
