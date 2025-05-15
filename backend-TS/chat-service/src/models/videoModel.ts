@@ -14,4 +14,4 @@ const VideoSchema = new mongoose.Schema<IVideo>({
     roomId: {type: Schema.Types.ObjectId, ref: 'Room',required: true},
 });
 
-const Video = mongoose.model<IVideo>('Video',VideoSchema);
+export const Video = mongoose.model<IVideo>('Video',VideoSchema);
