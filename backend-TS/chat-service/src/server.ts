@@ -6,9 +6,9 @@ import { Server } from "socket.io";
 import bodyParser from "body-parser";
 import multer from "multer";
 import connectDB from "./config/db.js";
-import roomRoutes from "./routes/roomRoutes.js";
+import roomRoutes from "./routes/roomRoutes";
 import {setupSocketIO} from "./socket.js";
-import videoRoutes from "./routes/videoRoutes.js";
+import videoRoutes from "./routes/videoRoutes";
 
 
 dotenv.config();
