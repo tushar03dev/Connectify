@@ -1,5 +1,4 @@
 import jwt from 'jsonwebtoken';
-import {User} from "../models/userModel.js";
 
 export function authenticateToken(req, res, next) {
     const token = req.headers.authorization.split(' ')[1];
