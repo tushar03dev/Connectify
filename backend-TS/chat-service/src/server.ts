@@ -5,7 +5,7 @@ import http from "http";
 import { Server } from "socket.io";
 import bodyParser from "body-parser";
 import multer from "multer";
-import connectDB from "./config/db.js";
+import connectDB from "./config/db.ts";
 import roomRoutes from "./routes/roomRoutes";
 import {setupSocketIO} from "./socket.js";
 import videoRoutes from "./routes/videoRoutes";

@@ -11,7 +11,6 @@ import roomRoutes from "./routes/roomRoutes.js";
 import {setupSocketIO} from "./socket.js";
 import videoRoutes from "./routes/videoRoutes.js";
 
-
 dotenv.config();
 
 const app = express();
