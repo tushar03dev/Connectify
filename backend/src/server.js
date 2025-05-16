@@ -4,7 +4,6 @@ import cors from "cors";
 import http from "http";
 import { Server } from "socket.io";
 import bodyParser from "body-parser";
-import multer from "multer";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import otpRoutes from "./routes/otpRoutes.js";

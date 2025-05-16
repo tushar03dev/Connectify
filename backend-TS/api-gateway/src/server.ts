@@ -2,27 +2,25 @@ import express from 'express';
 import {Response} from 'express';
 import authRoutes from './routes/authRoutes';
 import dotenv from 'dotenv';
-import multer from 'multer';
+import cors from "cors";
+import bodyParser from "body-parser";
 import chatRoutes from "./routes/chatRoutes";
 
-dotenv.config(); // Load environment variables from .env file
+dotenv.config();
 
 const app = express();
 
 // Middleware
-app.use(express.json()); // Parses incoming requests with JSON payloads
+app.use(express.json());
 
 // Middleware to handle form-data
-const upload = multer(); // You can configure multer to store files if needed
+app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// Middleware to parse form-data
-app.use(upload.none()); // This is used when you're not uploading any files, just data
-
-// Use the auth routes
-app.use('/a', authRoutes); // Mounts the auth routes
-
-// Use the chat Routes
-app.use('/c',chatRoutes);
+// Routes
+app.use('/auth', authRoutes);
+app.use('/chat',chatRoutes);
 
 //Error-handling middleware
 app.use((err: any, res: Response) => {
