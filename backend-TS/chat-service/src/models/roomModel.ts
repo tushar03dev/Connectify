@@ -12,4 +12,4 @@ const RoomSchema = new Mongoose.Schema<IRoom>({
     members:{type:[Mongoose.Types.ObjectId]},
 });
 
-const RoomModel = Mongoose.model<IRoom>('rooms',RoomSchema);
+const Room = Mongoose.model<IRoom>('rooms',RoomSchema);
