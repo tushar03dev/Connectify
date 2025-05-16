@@ -9,7 +9,7 @@ export interface IRoom extends Document {
 const RoomSchema = new mongoose.Schema<IRoom>({
     name: { type: String, required: true},
     code: { type: String, required: true},
-    members: [{ type: mongoose.Types.ObjectId, ref: 'User' }] ,
+    members: [{ type: mongoose.Types.ObjectId, ref: 'User',  default: [], required: true}] ,
 });
 
 export const Room = mongoose.model<IRoom>('rooms',RoomSchema);
