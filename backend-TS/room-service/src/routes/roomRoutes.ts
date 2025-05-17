@@ -1,20 +1,19 @@
 import {Router} from "express";
-import {authenticateToken} from "../middlewares/authMiddleware.js";
-import {createRoom, deleteRoom, getRooms, joinRoom} from "../controllers/roomController.js";
+import {createRoom, deleteRoom, getRooms, joinRoom} from "../controllers/roomController";
 
 const router = Router();
 
 
 // Create Room
-router.post('/create', authenticateToken,createRoom);
+router.post('/create', createRoom);
 
 // Join Room
-router.post('/join',authenticateToken,joinRoom);
+router.post('/join', joinRoom);
 
 // Get Rooms
-router.get('/get-rooms',authenticateToken,getRooms);
+router.get('/get-rooms', getRooms);
 
 // Delete Room
-router.delete('/delete-room/:roomId',authenticateToken,deleteRoom);
+router.delete('/delete-room/:roomId', deleteRoom);
 
 export default router;
