@@ -32,6 +32,23 @@ export async function createRoom(req: AuthRequest, res: Response): Promise<void>
     }
 }
 
+export async function joinRoom(req: AuthRequest, res: Response): Promise<void> {
+    try {
+        const {code, userId} = req.body;
+        if (!code) {
+            res.status(401).json({success: false, error: "Room Code not found"});
+        }
+        const response = await axios.post(`${CHAT_SERVICE_URL}/room/join-room`,{code, userId})
+        if (response.data.success) {
+            res.status(200).json({ success: true, data: response.data });
+        } else {
+            res.status(500).json({ success: false, error: "Failed to send message." });
+        }
+    } catch (error) {
+        console.error("[API Gateway] Failed to joinRoom:", error);
+    }
+}
+
 export async function getRooms(req: AuthRequest, res: Response): Promise<void> {
     try {
         const { userId } = req.body;
