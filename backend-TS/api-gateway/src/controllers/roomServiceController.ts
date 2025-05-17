@@ -81,7 +81,7 @@ export async function deleteRoom(req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
-        const response = await axios.delete(`${CHAT_SERVICE_URL}/room/delete-rooms/${userId}}`)
+        const response = await axios.delete(`${CHAT_SERVICE_URL}/room/delete-rooms/${userId}/${roomId}`)
 
         if (response.status === 200) {
             res.status(200).json({ success: true, data: response.data });
