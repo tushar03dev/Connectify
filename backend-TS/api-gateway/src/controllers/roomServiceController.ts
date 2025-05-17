@@ -8,7 +8,7 @@ const CHAT_SERVICE_URL = process.env.CHAT_SERVICE_URL;
 
 export async function createRoom(req: AuthRequest, res: Response): Promise<void> {
     try {
-        const {name, participants, userId} = req.body;
+        const {name, code, userId} = req.body;
 
         // check if UserId exists
         if (!userId) {
@@ -18,7 +18,7 @@ export async function createRoom(req: AuthRequest, res: Response): Promise<void>
 
         const response = await axios.post(`${CHAT_SERVICE_URL}/room/create-room}`,{
             name,
-            participants,
+            code,
             userId
         })
 
