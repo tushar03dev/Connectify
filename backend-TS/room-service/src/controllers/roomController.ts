@@ -2,12 +2,13 @@ import {Room} from "../models/roomModel"
 import {Request, Response} from "express"
 import {User} from "../models/userModel";
 
-export const createRoom = async (req: Request, res: Response) => {
+export const createRoom = async (req: Request, res: Response):Promise<void> => {
     try {
         const {name, code, userId} = req.body;
         const roomExists = await Room.findOne({code});
         if (roomExists) {
-            return res.status(400).json({message: 'Room already exists'});
+            res.status(400).json({message: 'Room already exists'});
+            return;
         }
 
         const room = new Room({
@@ -23,14 +24,14 @@ export const createRoom = async (req: Request, res: Response) => {
     }
 }
 
-export const joinRoom = async (req: Request, res: Response) => {
+export const joinRoom = async (req: Request, res: Response):Promise<void> => {
     try {
         const {code, userId} = req.body;
         const room = await Room.findOne({code});
 
         if (!room) {
-            return res.status(404).json({success: false, message: 'Room not found'});
-            ``
+            res.status(404).json({success: false, message: 'Room not found'});
+            return;
         }
 
         if (Array.isArray(room.members)) {
@@ -46,16 +47,18 @@ export const joinRoom = async (req: Request, res: Response) => {
     }
 }
 
-export const getRooms = async (req: Request, res: Response) => {
+export const getRooms = async (req: Request, res: Response):Promise<void> => {
     try {
         const { userId } = req.body;
         if(!userId) {
-            return res.status(400).json({success: false, message: 'User ID is required'});
+            res.status(400).json({success: false, message: 'User ID is required'});
+            return;
         }
 
         const user = await User.findOne({email: userId});
         if (!user) {
-            return res.status(404).json({success: false, message: 'User not found'});
+            res.status(404).json({success: false, message: 'User not found'});
+            return;
         }
 
         const rooms = await Room.find({members: user._id});
@@ -66,12 +69,13 @@ export const getRooms = async (req: Request, res: Response) => {
     }
 }
 
-export const deleteRoom = async (req: Request, res: Response) => {
+export const deleteRoom = async (req: Request, res: Response):Promise<void> => {
     try {
         const roomId = req.params.roomId;
         const room = await Room.findByIdAndDelete(roomId);
         if (!room) {
-            return res.status(404).json({success: false, message: 'Room not found'});
+            res.status(404).json({success: false, message: 'Room not found'});
+            return;
         }
         res.status(200).json({success: true, message: 'Room deleted successfully'});
     } catch (error) {
