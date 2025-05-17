@@ -14,18 +14,23 @@ const redisClient = new Redis();
 async function connectRabbitMQ() {
     const connection = await amqp.connect(RABBITMQ_URL);
     const channel = await connection.createChannel();
-    await channel.assertQueue("signupQueue", { durable: true });
     await channel.assertQueue("authQueue", { durable: true });
+    await channel.purgeQueue("authQueue");
     return channel;
 }
 
 async function processSignups(channel: amqp.Channel) {
-    await channel.consume("signupQueue", async (msg) => {
+    await channel.consume("authQueue", async (msg) => {
         if (!msg) {
-            console.error("No such message in signupQueue");
+            console.error("No such message in authQueue");
             return;
         }
         const { name, email, password } = JSON.parse(msg.content.toString());
+        if (!name || !email || !password) {
+            console.error("Invalid message data:", { name, email, password });
+            channel.ack(msg);
+            return;
+        }
 
         // Check Redis cache for duplicate prevention
         if (await redisClient.get(email)) return channel.ack(msg);

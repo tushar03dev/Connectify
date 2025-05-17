@@ -22,6 +22,7 @@ export async function signInRequestToAuthService(req: Request, res: Response) {
 export async function signUpRequestToAuthService(req: Request, res: Response) {
     try {
         const {name, email, password} = req.body;
+        console.log(name, email, password);
         const response = await axios.post(`${AUTH_SERVICE_URL}/auth/sign-up`, {name, email, password});
         if (response.data.success) {
             res.status(200).json({otpToken: response.data.otpToken, message: response.data.message});
@@ -38,7 +39,7 @@ export async function otpVerificationRequestToAuthService(req: Request, res: Res
         const {otpToken, otp} = req.body;
         const response = await axios.post(`${AUTH_SERVICE_URL}/otp/verify`, {otpToken, otp});
         if (response.data.success) {
-            res.status(200).json({otpToken: response.data.otpToken, message: response.data.message});
+            res.status(200).json({token: response.data.token, message: response.data.message});
         } else {
             res.status(500).json({success: false, error: "Failed to send message."});
         }

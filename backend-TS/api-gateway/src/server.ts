@@ -3,8 +3,8 @@ import {Response} from 'express';
 import authRoutes from './routes/authRoutes';
 import dotenv from 'dotenv';
 import cors from "cors";
-import bodyParser from "body-parser";
 import chatRoutes from "./routes/roomRoutes";
+import multer from "multer";
 
 dotenv.config();
 
@@ -14,9 +14,12 @@ const app = express();
 app.use(express.json());
 
 // Middleware to handle form-data
+const upload = multer(); // You can configure multer to store files if needed
+
+// Middleware to parse form-data
+app.use(upload.none()); // This is used when you're not uploading any files, just data
+
 app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
 
 // Routes
 app.use('/auth', authRoutes);
