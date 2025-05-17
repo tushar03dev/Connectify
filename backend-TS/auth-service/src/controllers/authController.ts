@@ -11,9 +11,9 @@ dotenv.config();
 let tempUser: any; // Temporary storage for user details
 
 export const signUp = async (req: Request, res: Response, next: NextFunction) => {
-    const {email, password} = req.body;
+    const {name, email, password} = req.body;
     // Check if all required fields are present
-    if (!email || !password) {
+    if (!name || !email || !password) {
         return res.status(400).json({ message: 'email and password are required.' });
     }
 
@@ -23,7 +23,7 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
             return res.status(400).send('User already exists.');
         }
 
-        tempUser = { email, password};
+        tempUser = { name, email, password};
 
         // Send OTP
         const otpToken = await sendOTP(email);
@@ -51,7 +51,7 @@ export const completeSignUp = async (req: Request, res: Response, next: NextFunc
             }
 
             // Create the new user
-            await(publishToQueue("signupQueue",{ email:tempUser.email, password: tempUser.password }));
+            await(publishToQueue("signupQueue",{ name:tempUser.name, email:tempUser.email, password: tempUser.password }));
 
             // Generate JWT token
             const token = jwt.sign({ email: tempUser.email }, process.env.JWT_SECRET as string, { expiresIn: "1d" });
