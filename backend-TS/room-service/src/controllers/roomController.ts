@@ -1,5 +1,6 @@
 import {Room} from "../models/roomModel"
 import {Request, Response} from "express"
+import {User} from "../models/userModel";
 
 export const createRoom = async (req: Request, res: Response) => {
     try {
@@ -45,3 +46,22 @@ export const joinRoom = async (req: Request, res: Response) => {
     }
 }
 
+export const getRooms = async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.body;
+        if(!userId) {
+            return res.status(400).json({success: false, message: 'User ID is required'});
+        }
+
+        const user = await User.findOne({email: userId});
+        if (!user) {
+            return res.status(404).json({success: false, message: 'User not found'});
+        }
+
+        const rooms = await Room.find({members: user._id});
+        res.status(200).json({success: true, rooms: rooms});
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({success: false, message: 'Internal server error'});
+    }
+}
