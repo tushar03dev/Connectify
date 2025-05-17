@@ -4,7 +4,7 @@ import authRoutes from './routes/authRoutes';
 import dotenv from 'dotenv';
 import cors from "cors";
 import bodyParser from "body-parser";
-import chatRoutes from "./routes/chatRoutes";
+import chatRoutes from "./routes/roomRoutes";
 
 dotenv.config();
 

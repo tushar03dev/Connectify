@@ -74,7 +74,7 @@ export async function getRooms(req: AuthRequest, res: Response): Promise<void> {
 export async function deleteRoom(req: AuthRequest, res: Response): Promise<void> {
     try {
         const { userId } = req.body;
-
+        const roomId = req.params.roomId;
         // check if UserId exists
         if (!userId) {
             res.status(401).json({success: false, error: "User not found"});
