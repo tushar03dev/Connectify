@@ -6,6 +6,7 @@ import connectDB from './config/db';
 import multer from 'multer';
 import otpRoutes from "./routes/otpRoutes";
 import {authConsumer} from "./consumers/authConsumer";
+import redisClient from "./config/redis";
 
 dotenv.config();
 
@@ -19,7 +20,11 @@ const upload = multer();
 app.use(upload.none());
 
 // MongoDB Connection
-connectDB().then(()=> authConsumer());
+connectDB().then(async ()=> {
+    await authConsumer();
+    await redisClient.connect();
+    console.log('Redis connected');
+});
 
 // Use the auth routes
 app.use('/auth', authRoutes); // Mounts the auth routes

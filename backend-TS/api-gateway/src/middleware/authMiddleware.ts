@@ -25,12 +25,12 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
         // Verify the token using the secret
         const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as jwt.JwtPayload;
 
-        if (!decoded.userId) {
+        if (!decoded.email) {
             res.status(400).json({ message: "Invalid token: User not found" });
             return;
         }
 
-        req.body.userId = decoded.userId;
+        req.body.userId = decoded.email;
         next();
     } catch (err) {
         const error = err as Error;
