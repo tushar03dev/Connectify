@@ -65,3 +65,17 @@ export const getRooms = async (req: Request, res: Response) => {
         res.status(500).json({success: false, message: 'Internal server error'});
     }
 }
+
+export const deleteRoom = async (req: Request, res: Response) => {
+    try {
+        const roomId = req.params.roomId;
+        const room = await Room.findByIdAndDelete(roomId);
+        if (!room) {
+            return res.status(404).json({success: false, message: 'Room not found'});
+        }
+        res.status(200).json({success: true, message: 'Room deleted successfully'});
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({success: false, message: 'Internal server error'});
+    }
+}
