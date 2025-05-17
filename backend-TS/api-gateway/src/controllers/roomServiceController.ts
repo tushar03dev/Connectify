@@ -16,14 +16,14 @@ export async function createRoom(req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
-        const response = await axios.post(`${CHAT_SERVICE_URL}/room/create-room}`,{
+        const response = await axios.post(`${CHAT_SERVICE_URL}/rooms/create-room}`,{
             name,
             code,
             userId
         })
 
         if (response.data.success) {
-            res.status(200).json({ success: true, data: response.data });
+            res.status(200).json({ success: true, room: response.data.room });
         } else {
             res.status(500).json({ success: false, error: "Failed to send message." });
         }
@@ -38,9 +38,9 @@ export async function joinRoom(req: AuthRequest, res: Response): Promise<void> {
         if (!code) {
             res.status(401).json({success: false, error: "Room Code not found"});
         }
-        const response = await axios.post(`${CHAT_SERVICE_URL}/room/join-room`,{code, userId})
+        const response = await axios.post(`${CHAT_SERVICE_URL}/rooms/join-room`,{code, userId})
         if (response.data.success) {
-            res.status(200).json({ success: true, data: response.data });
+            res.status(200).json({ success: true, room: response.data.room });
         } else {
             res.status(500).json({ success: false, error: "Failed to send message." });
         }
@@ -59,10 +59,10 @@ export async function getRooms(req: AuthRequest, res: Response): Promise<void> {
             return;
         }
 
-        const response = await axios.get(`${CHAT_SERVICE_URL}/room/get-rooms/${userId}}`)
+        const response = await axios.get(`${CHAT_SERVICE_URL}/rooms/get-rooms/${userId}}`)
 
         if (response.status === 200) {
-            res.status(200).json({ success: true, data: response.data });
+            res.status(200).json({ success: true, rooms: response.data.rooms });
         } else {
             res.status(500).json({ success: false, error: "Failed to send message." });
         }
