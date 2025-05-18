@@ -55,7 +55,7 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
             }
 
             const response = await axios.post(
-                `${API_BASE_URL}/rooms/create`,
+                `${API_BASE_URL}/rooms/create-room`,
                 { name, code },
                 {
                     headers: {
@@ -90,7 +90,7 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
             }
 
             const response = await axios.post(
-                `${API_BASE_URL}/rooms/join`,
+                `${API_BASE_URL}/rooms/join-room`,
                 { code },
                 {
                     headers: {

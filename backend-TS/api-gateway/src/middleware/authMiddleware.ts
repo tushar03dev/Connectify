@@ -12,7 +12,6 @@ export interface AuthRequest extends Request {
 }
 
 export const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    console.log("Authentication token");
     const authHeader = req.headers['authorization'];
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
         res.status(401).json({ message: 'Access denied. No token provided.' });

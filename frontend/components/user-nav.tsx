@@ -25,11 +25,9 @@ export function UserNav() {
     router.push("/")
   }
 
-  const initials = user.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
+  const initials = user?.name
+      ? user.name.split(" ").map(n => n[0]).join("").toUpperCase()
+      : "";
 
   return (
     <DropdownMenu>
