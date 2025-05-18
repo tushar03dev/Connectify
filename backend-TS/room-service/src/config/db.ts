@@ -10,9 +10,9 @@ const connectDB = async () => {
             throw new Error('MongoDB URI is not defined in the environment variables for Auth Service');
         }
         await mongoose.connect(uri,{});
-        console.log('MongoDB connected for Chat Service');
+        console.log('MongoDB connected for Room Service');
     } catch (error) {
-        console.error('MongoDB connection error for Chat Service:', error);
+        console.error('MongoDB connection error for Room Service:', error);
         process.exit(1); // Exit the process with failure
     }
 };

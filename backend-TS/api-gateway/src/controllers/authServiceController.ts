@@ -10,7 +10,7 @@ export async function signInRequestToAuthService(req: Request, res: Response) {
         const {email, password} = req.body;
         const response = await axios.post(`${AUTH_SERVICE_URL}/auth/sign-in`, {email, password});
         if (response.data.success) {
-            res.status(200).json({ token: response.data.token, message: response.data.message });
+            res.status(200).json({ token: response.data.token, name:response.data.name, message: response.data.message });
         } else {
             res.status(500).json({success: false, error: "Failed to send message."});
         }

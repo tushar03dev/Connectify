@@ -3,7 +3,8 @@ import {Response} from 'express';
 import authRoutes from './routes/authRoutes';
 import dotenv from 'dotenv';
 import connectDB from './config/db';
-import multer from 'multer';
+import bodyParser from 'body-parser';
+import cors from 'cors';
 import otpRoutes from "./routes/otpRoutes";
 import {authConsumer} from "./consumers/authConsumer";
 import redisClient from "./config/redis";
@@ -12,12 +13,9 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
-app.use(express.json());
-
-// Middleware to handle form-data
-const upload = multer();
-app.use(upload.none());
+app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // MongoDB Connection
 connectDB().then(async ()=> {
@@ -26,11 +24,8 @@ connectDB().then(async ()=> {
     console.log('Redis connected');
 });
 
-// Use the auth routes
-app.use('/auth', authRoutes); // Mounts the auth routes
-
-// Use the auth routes
-app.use('/otp',otpRoutes); // Mounts the auth routes
+app.use('/auth', authRoutes);
+app.use('/otp',otpRoutes);
 
 //Error-handling middleware
 app.use((err: any, res: Response) => {

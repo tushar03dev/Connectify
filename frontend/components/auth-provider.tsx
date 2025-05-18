@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const verifyOtp = async (otpToken: string, otp: string) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/otp/verify`, {otpToken, otp });
+      const response = await axios.post(`${API_BASE_URL}/auth/verify`, {otpToken, otp });
 
       if (response.data) {
         localStorage.setItem('token', JSON.stringify(response.data.token));
