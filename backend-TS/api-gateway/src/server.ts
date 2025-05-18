@@ -1,10 +1,10 @@
-import express from 'express';
-import {Response} from 'express';
+import express, {Request, Response, NextFunction} from 'express';
 import authRoutes from './routes/authRoutes';
 import dotenv from 'dotenv';
 import cors from "cors";
 import chatRoutes from "./routes/roomRoutes";
 import multer from "multer";
+import roomRoutes from "./routes/roomRoutes";
 
 dotenv.config();
 
@@ -24,9 +24,10 @@ app.use(cors());
 // Routes
 app.use('/auth', authRoutes);
 app.use('/chat',chatRoutes);
+app.use('/rooms', roomRoutes);
 
 //Error-handling middleware
-app.use((err: any, res: Response) => {
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     console.error(err.stack);
     res.status(500).json({ message: 'Something went wrong!' });
 });

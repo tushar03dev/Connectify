@@ -4,10 +4,10 @@ import {createRoom, deleteRoom, getRooms, joinRoom} from "../controllers/roomCon
 const router = Router();
 
 // Create Room
-router.post('/create', createRoom);
+router.post('/create-room', createRoom);
 
 // Join Room
-router.post('/join', joinRoom);
+router.post('/join-room', joinRoom);
 
 // Get Rooms
 router.get('/get-rooms/:userId', getRooms);

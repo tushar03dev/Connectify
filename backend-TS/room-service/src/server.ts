@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import express, {Response} from "express";
+import express, {Request, Response, NextFunction} from "express";
 import cors from "cors";
 import connectDB from "./config/db";
 import roomRoutes from "./routes/roomRoutes";
@@ -8,6 +8,7 @@ import multer from "multer";
 dotenv.config();
 
 const app = express();
+app.use(express.json());
 
 // Database Connection
 connectDB();
@@ -23,7 +24,7 @@ app.use(upload.none());
 app.use("/rooms", roomRoutes);
 
 //Error-handling middleware
-app.use((err: any, res: Response) => {
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     console.error(err.stack);
     res.status(500).json({ message: 'Something went wrong!' });
 });

@@ -20,6 +20,7 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
     }
 
     const token = authHeader.split(" ")[1];
+    console.log(token);
 
     try {
         // Verify the token using the secret
