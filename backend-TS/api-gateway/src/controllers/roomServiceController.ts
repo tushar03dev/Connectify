@@ -9,7 +9,6 @@ const CHAT_SERVICE_URL = process.env.CHAT_SERVICE_URL;
 export async function createRoom(req: AuthRequest, res: Response): Promise<void> {
     try {
         const {name, code, userId} = req.body;
-        console.log(name, code, userId);
 
         // check if UserId exists
         if (!userId) {
@@ -36,7 +35,6 @@ export async function createRoom(req: AuthRequest, res: Response): Promise<void>
 export async function joinRoom(req: AuthRequest, res: Response): Promise<void> {
     try {
         const {code, userId} = req.body;
-        console.log(code, userId);
         if (!code) {
             res.status(401).json({success: false, error: "Room Code not found"});
         }

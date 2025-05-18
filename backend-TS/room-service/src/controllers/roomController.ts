@@ -28,8 +28,15 @@ export const createRoom = async (req: Request, res: Response):Promise<void> => {
             code,
             members: [user._id],
         });
-        await room.save();
-        res.status(201).json({success: true, room: room});
+
+        const savedRoom = await room.save();
+        if (Array.isArray(user.rooms)) {
+            if (!user.rooms.includes(savedRoom._id as mongoose.Types.ObjectId)) {
+                user.rooms.push(savedRoom._id as mongoose.Types.ObjectId);
+                await user.save();
+                res.status(201).json({success: true, room: room});
+            }
+        }
     } catch (error) {
         console.error(error);
         res.status(500).json({success: false, message: 'Internal server error'});
@@ -39,6 +46,7 @@ export const createRoom = async (req: Request, res: Response):Promise<void> => {
 export const joinRoom = async (req: Request, res: Response):Promise<void> => {
     try {
         const {code, userId} = req.body;
+        console.log(code, userId);
         const room = await Room.findOne({code});
 
         if (!room) {
@@ -52,8 +60,16 @@ export const joinRoom = async (req: Request, res: Response):Promise<void> => {
             return;
         }
 
+        if (Array.isArray(user.rooms)) {
+            if (!user.rooms.includes(room._id as mongoose.Types.ObjectId)) {
+                user.rooms.push(room._id as mongoose.Types.ObjectId);
+                await user.save();
+                res.status(201).json({success: true, room: room});
+            }
+        }
+
         if (Array.isArray(room.members)) {
-            if (room.members.includes(user._id as mongoose.Types.ObjectId)) {
+            if (!room.members.includes(user._id as mongoose.Types.ObjectId)) {
                 room.members.push(user._id as mongoose.Types.ObjectId);
                 await room.save();
             }
@@ -73,14 +89,13 @@ export const getRooms = async (req: Request, res: Response):Promise<void> => {
             return;
         }
 
-        const user = await User.findOne({email: userId});
+        const user = await User.findOne({email: userId}).populate('rooms');
         if (!user) {
             res.status(404).json({success: false, message: 'User not found'});
             return;
         }
 
-        const rooms = await Room.find({members: user._id});
-        res.status(200).json({success: true, rooms: rooms});
+        res.status(200).json({success: true, rooms: user.rooms});
     } catch (error) {
         console.error(error);
         res.status(500).json({success: false, message: 'Internal server error'});
