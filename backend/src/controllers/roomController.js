@@ -10,7 +10,8 @@ export const createRoom = async (req, res) => {
     }
 
     const room = new Room({ code, name, members: [userId] });
-    await room.save();
+    const savedRoom = await room.save();
+
     res.status(201).json({room:room});
 }
 

@@ -9,7 +9,6 @@ const CHAT_SERVICE_URL = process.env.CHAT_SERVICE_URL;
 export async function createRoom(req: AuthRequest, res: Response): Promise<void> {
     try {
         const {name, code, userId} = req.body;
-        console.log(name, code, userId);
 
         // check if UserId exists
         if (!userId) {
@@ -36,7 +35,6 @@ export async function createRoom(req: AuthRequest, res: Response): Promise<void>
 export async function joinRoom(req: AuthRequest, res: Response): Promise<void> {
     try {
         const {code, userId} = req.body;
-        console.log(code, userId);
         if (!code) {
             res.status(401).json({success: false, error: "Room Code not found"});
         }
@@ -75,15 +73,14 @@ export async function getRooms(req: AuthRequest, res: Response): Promise<void> {
 
 export async function deleteRoom(req: AuthRequest, res: Response): Promise<void> {
     try {
-        const { userId } = req.body;
         const roomId = req.params.roomId;
         // check if UserId exists
-        if (!userId) {
-            res.status(401).json({success: false, error: "User not found"});
+        if (!roomId) {
+            res.status(401).json({success: false, error: "Room not found"});
             return;
         }
 
-        const response = await axios.delete(`${CHAT_SERVICE_URL}/room/delete-rooms/${userId}/${roomId}`)
+        const response = await axios.delete(`${CHAT_SERVICE_URL}/rooms/delete-room/${roomId}`)
 
         if (response.status === 200) {
             res.status(200).json({ success: true, data: response.data });

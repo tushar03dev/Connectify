@@ -91,7 +91,7 @@ export const signIn = async (req: Request, res: Response, next: NextFunction) =>
             return;
         }
 
-        const token = jwt.sign({ email:email }, process.env.JWT_SECRET as string, { expiresIn: '1d' });
+        const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET as string, { expiresIn: '1d' });
 
         res.json({success: true, token, name:user.name });
         return;
