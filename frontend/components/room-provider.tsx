@@ -145,7 +145,6 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
 
     const deleteRoom = async (roomId: string) => {
         try {
-            console.log(roomId)
             const token = localStorage.getItem("token")
             if (!token) {
                 console.log("token not found")
