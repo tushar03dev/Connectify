@@ -42,4 +42,37 @@ export const streamVideoById = async (req: Request, res :Response): Promise<void
     }
 };
 
+export const uploadVideo = async (req: Request, res: Response): Promise<void> => {
+    try {
+        console.log("REQ.FILE", req.file);
+        const file = req.file;
+        const { roomCode } = req.body;
+
+        if (!file || !roomCode) {
+            res.status(400).json({ error: "Missing file or roomId" });
+            return;
+        }
+
+        const room = await Room.findOne({ code: roomCode });
+        if (!room) {
+            res.status(404).send("Room not found");
+            return;
+        }
+
+        const video = new Video({
+            filename: file.filename,
+            originalName: file.originalname,
+            filePath: file.path,
+            roomId: room._id,
+        });
+
+        await video.save();
+
+        res.status(200).json({ video: video.toObject() });
+    } catch (err) {
+        console.error("Error uploading video:", err);
+        res.status(500).json({ error: "Server error while uploading video" });
+    }
+};
+
 
