@@ -1,18 +1,17 @@
 import express from 'express';
-import {authenticateToken} from "../middlewares/authMiddleware.js";
-import {deleteVideo, getVideos, streamVideoById, uploadVideo} from "../controllers/videoController.js";
-import upload from "../config/multer.js";
+import {deleteVideo, getVideos, streamVideoById, uploadVideo} from "../controllers/videoController";
+import upload from "../config/multer";
 
 const router = express.Router();
 
 
 // Route to upload a video
-router.post('/upload',upload.single('video'),uploadVideo);
+router.post('/upload',upload.single('video'), uploadVideo);
 
-router.get('/get-videos/:roomCode',authenticateToken,getVideos);
+router.get('/get-videos/:roomCode', getVideos);
 
-router.get("/play/:id", authenticateToken,streamVideoById);
+router.get("/play/:id", streamVideoById);
 
-router.delete('/delete/:id',authenticateToken,deleteVideo);
+router.delete('/delete/:id', deleteVideo);
 
 export default router;
