@@ -5,8 +5,8 @@ import http from "http";
 import { Server } from "socket.io";
 import bodyParser from "body-parser";
 import connectDB from "./config/db";
-import roomRoutes from "./routes/roomRoutes";
 import {setupSocketIO} from "./socket.js";
+import videoRoutes from "./routes/videoRoutes";
 
 
 dotenv.config();
@@ -34,7 +34,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Routes
-app.use("/rooms", roomRoutes);
+app.use("/video", videoRoutes);
 
 // Start Server
 const PORT = process.env.PORT || 5200;
