@@ -1,7 +1,6 @@
 import {Room} from "../models/roomModel.js";
 import {Video} from "../models/videoModel.js";
 import * as fs from "node:fs";
-import mongoose from "mongoose";
 
 
 export const streamVideoById = async (req, res) => {
