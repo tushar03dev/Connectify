@@ -23,7 +23,7 @@ app.use('/rooms', roomRoutes);
 
 // Proxy /socket.io to VC server
 app.use('/socket.io', createProxyMiddleware({
-    target: process.env.VC_SERVER_URL,
+    target: process.env.VIDEO_SERVICE_URL,
     changeOrigin: true,
     ws: true, // WebSocket support
     pathRewrite: {
