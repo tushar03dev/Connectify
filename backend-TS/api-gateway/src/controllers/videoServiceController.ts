@@ -58,29 +58,27 @@ export async function streamVideoById(req: AuthRequest, res: Response): Promise<
     }
 }
 
-export async function uploadVideo(req:AuthRequest, res:Response): Promise<void> {
-    try{
-        const file = req.file;
-        const { roomCode } = req.body;
-        if (!file || !roomCode) {
-            res.status(400).json({ success: false, error: "No file uploaded." });
-            return;
-        }
+export async function uploadVideo(req: AuthRequest, res: Response): Promise<void> {
+    try {
+        const response = await axios.post(
+            `${VIDEO_SERVICE_URL}/video/upload`,
+            req, // pipe the raw incoming request stream directly
+            {
+                headers: {
+                    ...req.headers, // forward original headers including Content-Type
+                },
+                maxContentLength: Infinity,
+                maxBodyLength: Infinity,
+            }
+        );
 
-        const response = await axios.post(`${VIDEO_SERVICE_URL}/video/upload-video`, {
-            file: file.buffer,
-            roomCode: roomCode
-        })
-
-        if (response.status === 200) {
-            res.status(200).json(response.data);
-        } else {
-            res.status(500).json({ success: false, error: "Failed to upload video." });
-        }
+        res.status(response.status).json(response.data);
     } catch (err) {
-        console.log("[API Gateway] Failed to reach Video Chat Server upload video: ", err);
+        console.error("[API Gateway] Failed to upload video to VC server:", err);
+        res.status(500).json({ success: false, error: "Failed to upload video." });
     }
 }
+
 
 export async function getVideos(req: AuthRequest, res: Response): Promise<void> {
     try {
