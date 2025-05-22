@@ -15,9 +15,10 @@ const app = express();
 
 const server = http.createServer(app);
 
+const API_GATEWAY_URL = process.env.API_GATEWAY_URL;
 const io = new Server(server, {
     cors: {
-        origin: "*",
+        origin: `${API_GATEWAY_URL}`,
         methods: ["GET", "POST"],
     },
 });
