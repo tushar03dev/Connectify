@@ -19,5 +19,7 @@ const storage: StorageEngine = multer.diskStorage({
     },
 });
 
+// @ts-ignore
 const upload = multer({ storage });
+// @ts-ignore
 export default upload;

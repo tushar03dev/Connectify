@@ -76,8 +76,7 @@ export const uploadVideo = async (req: Request, res: Response): Promise<void> =>
 };
 
 export const getVideos = async (req: Request, res: Response) => {
-    const {roomCode} = req.params;
-
+    const roomCode = req.params.roomCode;
     const room = await Room.findOne({code: roomCode});
     if (!room) {
         res.status(404).json({message: 'Room not found'});
