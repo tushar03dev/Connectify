@@ -2,10 +2,7 @@ import multer, { StorageEngine } from "multer";
 import path from "path";
 import fs from "fs";
 
-// Emulate __dirname in CommonJS mode:
-const __dirname = path.dirname(process.argv[1]);
-
-// Ensure that the 'videos' directory exists
+// Use __dirname directly – it's already available
 const videoDirectory = path.join(__dirname, "videos");
 if (!fs.existsSync(videoDirectory)) {
     fs.mkdirSync(videoDirectory, { recursive: true });
@@ -22,5 +19,7 @@ const storage: StorageEngine = multer.diskStorage({
     },
 });
 
+// @ts-ignore
 const upload = multer({ storage });
+// @ts-ignore
 export default upload;

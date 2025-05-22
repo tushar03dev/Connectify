@@ -7,6 +7,7 @@ import bodyParser from "body-parser";
 import roomRoutes from "./routes/roomRoutes";
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import * as http from "node:http";
+import videoRoutes from "./routes/videoRoutes";
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/auth', authRoutes);
 app.use('/chat',chatRoutes);
 app.use('/rooms', roomRoutes);
+app.use('/video', videoRoutes);
 
 // Proxy /socket.io to VC server
 app.use('/socket.io', createProxyMiddleware({
