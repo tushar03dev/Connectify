@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.post('/upload',authenticateToken,upload.single('video'),uploadVideo);
 
-router.get('/getvideos/:roomCode',authenticateToken,getVideos);
+router.get('/get-videos/:roomCode',authenticateToken,getVideos);
 
 router.get("play/:id",authenticateToken,streamVideoById);
 

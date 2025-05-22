@@ -5,7 +5,7 @@ import http from "http";
 import { Server } from "socket.io";
 import bodyParser from "body-parser";
 import connectDB from "./config/db";
-import {setupSocketIO} from "./socket.js";
+import {setupSocketIO} from "./socket";
 import videoRoutes from "./routes/videoRoutes";
 
 
@@ -37,7 +37,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/video", videoRoutes);
 
 // Start Server
-const PORT = process.env.PORT || 5200;
+const PORT = process.env.PORT;
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
