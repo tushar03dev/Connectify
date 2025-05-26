@@ -43,7 +43,7 @@ const io = new SocketIOServer(server, {
         origin: '*',
         methods: ['GET', 'POST']
     },
-    path: '/socket.io',
+    path: '/socket.io/',
 });
 
 io.on('connection', (clientSocket: Socket) => {

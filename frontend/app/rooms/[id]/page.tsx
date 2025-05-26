@@ -66,6 +66,7 @@ export default function RoomPage() {
       auth: {
         token: localStorage.getItem("token"),
       },
+      path: '/socket.io/',
     });
 
     socketRef.current?.on("connect", () => {
@@ -304,7 +305,60 @@ export default function RoomPage() {
               </div>
             </div>
 
-
+            {/* Chat Box */}
+            <div className="flex flex-col rounded-lg border bg-card shadow-sm">
+              <div className="border-b p-3">
+                <h2 className="font-semibold">Chat</h2>
+              </div>
+              <div
+                  ref={chatContainerRef}
+                  className="flex-1 overflow-y-auto p-3"
+                  style={{ maxHeight: "calc(100vh - 300px)" }}
+              >
+                {messages.length > 0 ? (
+                    <div className="space-y-4">
+                      {messages.map((msg) => (
+                          <div key={msg.id} className="flex flex-col">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium">{msg.user}</span>
+                              <span className="text-xs text-muted-foreground">
+                          {msg.timestamp ? msg.timestamp.toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }) : ""}
+                        </span>
+                            </div>
+                            <p className="mt-1">{msg.text}</p>
+                          </div>
+                      ))}
+                    </div>
+                ) : (
+                    <div className="flex h-full items-center justify-center text-muted-foreground">No messages yet</div>
+                )}
+              </div>
+              <div className="border-t p-3">
+                <form
+                    onSubmit={handleSendMessage}
+                    className="flex space-x-2"
+                >
+                  <Textarea
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Type a message..."
+                      className="min-h-[40px] flex-1 resize-none"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          e.currentTarget.form?.requestSubmit();
+                        }
+                      }}
+                  />
+                  <Button type="submit" size="icon" disabled={!message.trim()}>
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </form>
+              </div>
+            </div>
 
             {/* Video List */}
             <div className="space-y-4">
