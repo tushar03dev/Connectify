@@ -13,36 +13,29 @@ dotenv.config();
 
 const app = express();
 
-// Middlewares
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Routes
 app.use('/auth', authRoutes);
 app.use('/rooms', roomRoutes);
 app.use('/video', videoRoutes);
 
-// Error handling
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     console.error('Server error:', err.stack);
     res.status(500).json({ message: 'Something went wrong!' });
 });
 
-// Start HTTP server
 const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
-// Start listening
 server.listen(PORT, () => {
     console.log(`API Gateway running on http://localhost:${PORT}`);
+    console.log(`VIDEO_SERVER_URL: ${process.env.VIDEO_SERVER_URL}`);
 });
 
 const io = new SocketIOServer(server, {
-    cors: {
-        origin: '*',
-        methods: ['GET', 'POST']
-    },
+    cors: { origin: '*', methods: ['GET', 'POST'] },
     path: '/socket.io/',
 });
 
@@ -52,8 +45,8 @@ io.on('connection', (clientSocket: Socket) => {
 
     const chatSocket: ClientSocket = ClientIO(process.env.VIDEO_SERVER_URL!, {
         auth: { token },
-        transports: ['websocket','polling'],
-        path: '/socket.io/', // Add path to match VC Server
+        transports: ['websocket', 'polling'], // Allow polling fallback
+        path: '/socket.io/',
     });
 
     chatSocket.on('connect', () => {
@@ -61,7 +54,7 @@ io.on('connection', (clientSocket: Socket) => {
     });
 
     chatSocket.on('connect_error', (error) => {
-        console.error('API Gateway to VC Server connection error:', error.message);
+        console.error('API Gateway to VC Server connection error:', error.message, error);
     });
 
     chatSocket.on('connect_timeout', () => {

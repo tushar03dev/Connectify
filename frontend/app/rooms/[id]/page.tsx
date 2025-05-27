@@ -64,7 +64,7 @@ export default function RoomPage() {
     }
 
     socketRef.current = io(process.env.NEXT_PUBLIC_API_BASE_URL, {
-      transports: ["websocket"],
+      transports: ["websocket", 'polling'],
       auth: { token },
       path: '/socket.io/',
     });
@@ -75,7 +75,7 @@ export default function RoomPage() {
     });
 
     socketRef.current?.on("connect_error", (error) => {
-      console.error("Socket connection error:", error.message);
+      console.error("Socket connection error:", error.message, error);
     });
 
     socketRef.current?.on("joinRoomResponse", (response) => {
@@ -242,7 +242,7 @@ export default function RoomPage() {
     if (message.trim() && user && socketRef.current) {
       const newMessage = {
         id: uuidv4(),
-        user: user.name,
+        user: user.name || user.email || "User",
         text: message,
         timestamp: new Date(),
       };
