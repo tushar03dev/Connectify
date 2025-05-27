@@ -48,19 +48,33 @@ const io = new SocketIOServer(server, {
 
 io.on('connection', (clientSocket: Socket) => {
     const token = clientSocket.handshake.auth?.token;
-
-    console.log(`Frontend connected: ${clientSocket.id}`);
+    console.log(`Frontend connected: ${clientSocket.id}, Token: ${token}`);
 
     const chatSocket: ClientSocket = ClientIO(process.env.VIDEO_SERVER_URL!, {
         auth: { token },
-        transports: ['websocket'],
+        transports: ['websocket','polling'],
+        path: '/socket.io/', // Add path to match VC Server
+    });
+
+    chatSocket.on('connect', () => {
+        console.log(`API Gateway connected to VC Server: ${chatSocket.id}`);
+    });
+
+    chatSocket.on('connect_error', (error) => {
+        console.error('API Gateway to VC Server connection error:', error.message);
+    });
+
+    chatSocket.on('connect_timeout', () => {
+        console.error('API Gateway to VC Server connection timeout');
     });
 
     clientSocket.onAny((event, ...args) => {
+        console.log(`Forwarding event from frontend: ${event}`, args);
         chatSocket.emit(event, ...args);
     });
 
     chatSocket.onAny((event, ...args) => {
+        console.log(`Forwarding event from VC Server: ${event}`, args);
         clientSocket.emit(event, ...args);
     });
 
@@ -70,6 +84,7 @@ io.on('connection', (clientSocket: Socket) => {
     });
 
     chatSocket.on('disconnect', () => {
+        console.log('ChatSocket disconnected from VC Server');
         clientSocket.disconnect();
     });
 });

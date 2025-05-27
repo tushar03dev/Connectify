@@ -56,36 +56,43 @@ export default function RoomPage() {
 
   const socketRef = useRef<Socket<DefaultEventsMap, DefaultEventsMap> | null>(null)
 
-  // Initialize socket connection
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token) {
+      console.error("No token found in localStorage");
+      return;
+    }
 
     socketRef.current = io(process.env.NEXT_PUBLIC_API_BASE_URL, {
       transports: ["websocket"],
-      auth: {
-        token: localStorage.getItem("token"),
-      },
+      auth: { token },
       path: '/socket.io/',
     });
 
     socketRef.current?.on("connect", () => {
-      console.log("Connected to socket server");
+      console.log("Connected to socket server:", socketRef.current?.id);
       socketRef.current?.emit("joinRoom", { roomId: id });
     });
 
-    // Handle video selection
+    socketRef.current?.on("connect_error", (error) => {
+      console.error("Socket connection error:", error.message);
+    });
+
+    socketRef.current?.on("joinRoomResponse", (response) => {
+      console.log("Join room response:", response);
+    });
+
     socketRef.current?.on("video-selected", ({ videoUrl }) => {
+      console.log("Video selected:", videoUrl);
       setSelectedVideoPath(videoUrl);
       if (videoRef.current) {
         videoRef.current.src = videoUrl;
         videoRef.current.load();
-        setIsPlaying(false); // Reset play state
-        setCurrentTime(0); // Reset time
+        setIsPlaying(false);
+        setCurrentTime(0);
       }
     });
 
-    // Handle play/pause state
     socketRef.current?.on("vid-state", (data) => {
       if (!data || typeof data !== 'object' || !('isPlaying' in data) || !('videoUrl' in data) || !('currentTime' in data)) {
         console.error("Invalid vid-state payload:", data);
@@ -93,7 +100,6 @@ export default function RoomPage() {
       }
       const { isPlaying, videoUrl, currentTime } = data;
       if (videoRef.current) {
-        // Ensure the correct video is loaded
         if (videoRef.current.src !== videoUrl) {
           videoRef.current.src = videoUrl;
           videoRef.current.load();
@@ -112,7 +118,6 @@ export default function RoomPage() {
       }
     });
 
-    // Handle seek (progress bar movement)
     socketRef.current?.on("progress-bar-clicked", ({ newTime, videoUrl }) => {
       if (videoRef.current) {
         if (videoRef.current.src !== videoUrl) {
@@ -124,12 +129,8 @@ export default function RoomPage() {
       }
     });
 
-    socketRef.current?.on("update-users", (userList) => {
+    socketRef.current?.on("roomUsers", (userList) => {
       console.log("User list updated:", userList);
-    });
-
-    socketRef.current?.on("disconnect", () => {
-      console.log("Disconnected from socket server");
     });
 
     socketRef.current?.on("receiveMessage", (incomingMessage) => {
@@ -140,13 +141,17 @@ export default function RoomPage() {
         text: incomingMessage.message?.text || "",
         timestamp: incomingMessage.message?.timestamp ? new Date(incomingMessage.message.timestamp) : new Date(),
       };
-      console.log("Parsed message with ID:", parsedMessage.id);
+      console.log("Parsed message:", parsedMessage);
       setMessages((prevMessages) => {
         if (prevMessages.some((m) => m.id === parsedMessage.id)) {
           return prevMessages;
         }
         return [...prevMessages, parsedMessage];
       });
+    });
+
+    socketRef.current?.on("disconnect", () => {
+      console.log("Disconnected from socket server");
     });
 
     return () => {
@@ -241,11 +246,20 @@ export default function RoomPage() {
         text: message,
         timestamp: new Date(),
       };
-      socketRef.current?.emit("sendMessage", {
+      console.log("Sending message:", newMessage);
+      setMessages((prevMessages) => [...prevMessages, newMessage]); // Optimistic update
+      socketRef.current.emit("sendMessage", {
         roomId: id,
         message: newMessage,
+      }, (response: any) => {
+        console.log("Send message response:", response);
+        if (response?.error) {
+          setMessages((prevMessages) => prevMessages.filter((m) => m.id !== newMessage.id));
+        }
       });
       setMessage("");
+    } else {
+      console.error("Cannot send message:", { message, user, socket: socketRef.current });
     }
   };
 

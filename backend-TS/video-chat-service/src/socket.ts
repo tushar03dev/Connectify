@@ -1,10 +1,12 @@
+// socket.ts
 import { Server, Socket } from "socket.io";
 import jwt from "jsonwebtoken";
 import { Room } from "./models/roomModel";
 import mongoose from "mongoose";
+import {User} from "./models/userModel";
 
 interface AuthenticatedSocket extends Socket {
-    userId?: string;
+    email?: string;
     userName?: string;
 }
 
@@ -14,7 +16,12 @@ interface JoinRoomPayload {
 
 interface MessagePayload {
     roomId: string;
-    message: string;
+    message: {
+        id: string;
+        user: string;
+        text: string;
+        timestamp: Date | string;
+    };
 }
 
 interface VideoSelectedPayload {
@@ -36,41 +43,54 @@ interface ProgressBarClickedPayload {
 }
 
 export const setupSocketIO = (io: Server) => {
-    // Middleware: verify JWT
     io.use((socket: AuthenticatedSocket, next) => {
         const token = socket.handshake.auth?.token;
-        if (!token) return next(new Error("Authentication error"));
-
+        console.log('Token received:', token);
+        if (!token) {
+            console.error('No token provided');
+            return next(new Error("Authentication error"));
+        }
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as jwt.JwtPayload;
-            socket.userId = decoded.userId;
-            socket.userName = decoded.userName;
+            console.log('Decoded JWT:', decoded);
+            socket.email = decoded.email;
+            socket.userName = decoded.email || "User"; // Fallback to email or generic name
             next();
         } catch (err) {
+            console.error('JWT verification failed:', err);
             return next(new Error("Authentication error"));
         }
     });
 
-    io.on("connection", (socket: AuthenticatedSocket) => {
-        console.log("A user connected:", socket.userId);
+    io.on("connection", async (socket: AuthenticatedSocket) => {
+        console.log("A user connected:", socket.email, socket.id);
+
+        const email = socket.email;
+        if (!email) {
+            console.error('No email found in socket token payload');
+            return
+        }
+
+        const user = await User.findOne({ email });
+        if(!user) {
+            console.error('No user found');
+            return
+        }
 
         socket.on("joinRoom", async ({ roomId }: JoinRoomPayload) => {
-            const userId = socket.userId;
-            if (!userId) return;
 
             let room = await Room.findOne({ code: roomId });
-
             if (!room) {
-                room = new Room({ code: roomId, members: [new mongoose.Types.ObjectId(userId)] });
+                room = new Room({ code: roomId, members: [new mongoose.Types.ObjectId(user._id as mongoose.Types.ObjectId)] });
             } else {
                 if (Array.isArray(room.members)) {
-                    const userObjectId = new mongoose.Types.ObjectId(userId);
+                    const userObjectId = new mongoose.Types.ObjectId(user._id as mongoose.Types.ObjectId);
                     if (!room.members.some(id => id.equals(userObjectId))) {
                         room.members.push(userObjectId);
                     }
                 } else {
                     // fallback in case room.members is undefined or corrupted
-                    room.members = [new mongoose.Types.ObjectId(userId)];
+                    room.members = [new mongoose.Types.ObjectId(user._id as mongoose.Types.ObjectId)];
                 }
             }
 
@@ -85,23 +105,28 @@ export const setupSocketIO = (io: Server) => {
         });
 
         socket.on("sendMessage", ({ roomId, message }: MessagePayload) => {
-            if (!roomId || !message) return;
-
+            if (!roomId || !message) {
+                console.error("Invalid sendMessage payload:", { roomId, message });
+                return;
+            }
+            console.log("Received sendMessage:", { roomId, message });
             io.to(roomId).emit("receiveMessage", {
                 userName: socket.userName || "User",
-                message,
+                message: {
+                    id: message.id,
+                    text: message.text,
+                    timestamp: message.timestamp,
+                },
             });
         });
 
         socket.on("leaveRoom", async ({ roomId }: JoinRoomPayload) => {
-            const userId = socket.userId;
-            if (!userId) return;
 
             const room = await Room.findOne({ code: roomId });
 
             if (room) {
                 if (Array.isArray(room.members)) {
-                    room.members = room.members.filter((u) => u.toString() !== userId);
+                    room.members = room.members.filter((u) => u.toString() !== user._id);
                     await room.save();
 
                     socket.leave(roomId);
