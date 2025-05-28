@@ -375,58 +375,7 @@ export default function RoomPage() {
             </div>
 
             {/* Video List */}
-            <div className="space-y-4">
-              {videos.map((video) => (
-                  <Card key={video.originalName}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="rounded-full bg-primary/10 p-2">
-                            <Video className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="font-medium">{video.originalName}</h3>
-                          </div>
-                        </div>
-                        <Button
-                            size="sm"
-                            onClick={() => {
-                              const videoUrl = video.streamingUrl;
-                              if (!videoUrl) {
-                                console.error("No video URL available for playback");
-                                alert("Failed to play video: No video URL available");
-                                return;
-                              }
-                              setSelectedVideoPath(videoUrl);
-                              setIsPlaying(true);
-                              if (videoRef.current) {
-                                videoRef.current.src = videoUrl;
-                                videoRef.current.load();
-                                videoRef.current.play().catch((error) => {
-                                  console.error("Play error:", error);
-                                  setIsPlaying(false);
-                                });
-                                // Emit video selection and play state
-                                socketRef.current?.emit("video-selected", {
-                                  roomId: id,
-                                  videoUrl,
-                                });
-                                socketRef.current?.emit("vid-state", {
-                                  roomId: id,
-                                  isPlaying: true,
-                                  videoUrl,
-                                  currentTime: 0,
-                                });
-                              }
-                            }}
-                        >
-                          Play
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-              ))}
-            </div>
+
 
             {/* Upload Video */}
             <Card>
