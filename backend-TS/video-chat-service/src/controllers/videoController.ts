@@ -47,6 +47,47 @@ async function deleteFromS3(key: string) {
     await s3Client.send(command);
 }
 
+// 🎥 Upload Video and store it in S3
+export const uploadVideo = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const file = req.file;
+        const { roomCode } = req.body;
+
+        if (!file || !roomCode) {
+            res.status(400).json({ error: "Missing file or roomCode" });
+            return;
+        }
+
+        const room = await Room.findOne({ code: roomCode });
+        if (!room) {
+            res.status(404).send("Room not found");
+            return;
+        }
+
+        const s3Key = `uploads/user-uploads/${file.filename}`;
+        const contentType = file.mimetype;
+
+        await uploadToS3(file.path, s3Key, contentType);
+
+        const video = new Video({
+            filename: file.filename,
+            originalName: file.originalname,
+            filePath: s3Key, // Store S3 key, not local path
+            roomId: room._id,
+        });
+
+        await video.save();
+
+        // Optional: delete the file locally after upload
+        fs.unlinkSync(file.path);
+
+        res.status(200).json({ video: video.toObject() });
+    } catch (err) {
+        console.error("Error uploading video:", err);
+        res.status(500).json({ error: "Server error while uploading video" });
+    }
+};
+
 export const streamVideoById = async (req: Request, res :Response): Promise<void> => {
     const range = req.headers.range;
     if (!range) {
