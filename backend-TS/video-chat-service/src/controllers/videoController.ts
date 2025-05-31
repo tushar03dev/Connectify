@@ -2,7 +2,7 @@ import fs from "node:fs";
 import {Video} from "../models/videoModel";
 import {Request, Response} from "express";
 import {Room} from "../models/roomModel";
-import {GetObjectCommand, S3Client} from "@aws-sdk/client-s3";
+import {GetObjectCommand, PutObjectCommand, S3Client} from "@aws-sdk/client-s3";
 import dotenv from "dotenv";
 import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
 
@@ -26,7 +26,17 @@ async function getObjectURL(key: string) {
     return await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
 }
 
+async function uploadToS3(filePath: string, s3Key: string, contentType: string) {
+    const fileStream = fs.createReadStream(filePath);
+    const uploadParams = {
+        Bucket: process.env.AWS_BUCKET_NAME as string,
+        Key: s3Key,
+        Body: fileStream,
+        ContentType: contentType,
+    };
 
+    await s3Client.send(new PutObjectCommand(uploadParams));
+}
 
 export const streamVideoById = async (req: Request, res :Response): Promise<void> => {
     const range = req.headers.range;
