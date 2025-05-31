@@ -4,7 +4,6 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import http from 'http';
 import authRoutes from './routes/authRoutes';
-import videoRoutes from './routes/videoRoutes';
 import roomRoutes from './routes/roomRoutes';
 import { Duplex } from 'stream';
 import { createProxyMiddleware } from 'http-proxy-middleware';
@@ -12,6 +11,7 @@ import * as net from "node:net";
 import {authenticateToken} from "./middleware/authMiddleware";
 
 dotenv.config();
+
 // Create proxy for WebSocket/socket.io traffic
 const chatServerTarget = process.env.VIDEO_SERVER_URL;
 
