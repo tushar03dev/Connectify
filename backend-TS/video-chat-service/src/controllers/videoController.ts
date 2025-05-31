@@ -126,34 +126,22 @@ export const getVideos = async (req: Request, res: Response) => {
     res.status(200).json({ videos });
 };
 
-export const getVideos = async (req: Request, res: Response) => {
-    const roomCode = req.params.roomCode;
-    const room = await Room.findOne({code: roomCode});
-    if (!room) {
-        res.status(404).json({message: 'Room not found'});
-        return;
-    }
-
-    const videos = await Video.find({roomId: room._id});
-    if (!videos) {
-        res.status(404).json({message: 'Video not found'});
-        return;
-    }
-
-    res.status(200).json({videos: videos});
-}
-
+// Delete video from S3 and DB
 export const deleteVideo = async (req: Request, res: Response) => {
     try {
         const videoId = req.params.id;
         const video = await Video.findByIdAndDelete(videoId);
+
         if (!video) {
             res.status(404).send("Video not found");
             return;
         }
+
+        await deleteFromS3(video.filePath);
+
         res.status(200).send("Video was deleted successfully");
     } catch (error) {
         console.error("Error deleting video:", error);
         res.status(500).send("Internal Server Error");
     }
-}
+};
