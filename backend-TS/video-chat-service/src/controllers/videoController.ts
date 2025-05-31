@@ -2,8 +2,9 @@ import fs from "node:fs";
 import {Video} from "../models/videoModel";
 import {Request, Response} from "express";
 import {Room} from "../models/roomModel";
-import {S3Client} from "@aws-sdk/client-s3";
+import {GetObjectCommand, S3Client} from "@aws-sdk/client-s3";
 import dotenv from "dotenv";
+import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
 
 
 dotenv.config();
@@ -15,6 +16,15 @@ const s3Client = new S3Client({
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string,
     }
 });
+
+async function getObjectURL(key: string) {
+    const command = new GetObjectCommand({
+        Bucket: process.env.AWS_BUCKET_NAME as string,
+        Key: key,
+    });
+
+    return await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
+}
 
 
 
