@@ -38,6 +38,15 @@ async function uploadToS3(filePath: string, s3Key: string, contentType: string) 
     await s3Client.send(new PutObjectCommand(uploadParams));
 }
 
+async function deleteFromS3(key: string) {
+    const command = new DeleteObjectCommand({
+        Bucket: process.env.AWS_BUCKET_NAME as string,
+        Key: key,
+    });
+
+    await s3Client.send(command);
+}
+
 export const streamVideoById = async (req: Request, res :Response): Promise<void> => {
     const range = req.headers.range;
     if (!range) {
