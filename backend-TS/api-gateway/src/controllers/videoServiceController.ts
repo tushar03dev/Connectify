@@ -4,7 +4,7 @@ import {AuthRequest} from "../middleware/authMiddleware";
 import axios from "axios";
 
 dotenv.config();
-const VIDEO_SERVICE_URL = process.env.VIDEO_SERVICE_URL;
+const VIDEO_SERVICE_URL = process.env.VIDEO_SERVER_URL;
 
 export async function streamVideoById(req: AuthRequest, res: Response): Promise<void> {
     try {
