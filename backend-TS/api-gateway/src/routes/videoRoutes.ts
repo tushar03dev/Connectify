@@ -2,10 +2,15 @@ import express from "express";
 import {deleteVideo, getVideos, streamVideoById, uploadVideo} from "../controllers/videoServiceController";
 import upload from "../config/multer";
 import {authenticateToken} from "../middleware/authMiddleware";
+import {createProxyMiddleware} from "http-proxy-middleware";
 
 const router = express.Router();
 
-router.post('/upload',authenticateToken,upload.single('video'),uploadVideo);
+const proxy = createProxyMiddleware;
+router.post('/upload',authenticateToken, proxy({
+    target: `${process.env.VIDEO_SERVER_URL}/upload`,
+    changeOrigin: true,
+}));
 
 router.get('/get-videos/:roomCode',authenticateToken,getVideos);
 

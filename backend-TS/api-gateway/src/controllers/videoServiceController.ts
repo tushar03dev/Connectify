@@ -4,7 +4,7 @@ import {AuthRequest} from "../middleware/authMiddleware";
 import axios from "axios";
 
 dotenv.config();
-const VIDEO_SERVICE_URL = process.env.VIDEO_SERVICE_URL;
+const VIDEO_SERVICE_URL = process.env.VIDEO_SERVER_URL;
 
 export async function streamVideoById(req: AuthRequest, res: Response): Promise<void> {
     try {
@@ -57,28 +57,6 @@ export async function streamVideoById(req: AuthRequest, res: Response): Promise<
             .json({ success: false, error: "Bad Gateway: couldn’t reach video service." });
     }
 }
-
-export async function uploadVideo(req: AuthRequest, res: Response): Promise<void> {
-    try {
-        const response = await axios.post(
-            `${VIDEO_SERVICE_URL}/video/upload`,
-            req, // pipe the raw incoming request stream directly
-            {
-                headers: {
-                    ...req.headers, // forward original headers including Content-Type
-                },
-                maxContentLength: Infinity,
-                maxBodyLength: Infinity,
-            }
-        );
-
-        res.status(response.status).json(response.data);
-    } catch (err) {
-        console.error("[API Gateway] Failed to upload video to VC server:", err);
-        res.status(500).json({ success: false, error: "Failed to upload video." });
-    }
-}
-
 
 export async function getVideos(req: AuthRequest, res: Response): Promise<void> {
     try {
