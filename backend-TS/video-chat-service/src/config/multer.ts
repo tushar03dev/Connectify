@@ -1,17 +1,22 @@
-import path from "path";
-import multer from "multer";
-import fs from "fs";
+// src/config/multerConfig.ts
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
-// CommonJS-style __dirname is available by default in non-ESM
-const videoDirectory = path.join(__dirname, "videos");
-if (!fs.existsSync(videoDirectory)) {
-    fs.mkdirSync(videoDirectory);
+// Ensure the temp upload folder exists
+const uploadDir = path.join(__dirname, '../../uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 const storage = multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, videoDirectory),
-    filename: (_req, file, cb) =>
-        cb(null, `${Date.now()}-${file.originalname.replace(/\s/g, "_")}`),
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    },
 });
 
 const upload = multer({ storage });
