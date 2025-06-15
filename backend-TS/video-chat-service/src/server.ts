@@ -39,14 +39,14 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use('/video', videoRoutes);
+app.use('/', videoRoutes);
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error('Video service error:', err);
     res.status(500).json({ message: 'Internal server error' });
 });
 
-const PORT = process.env.PORT || 5003;
+const PORT = process.env.PORT;
 
 server.listen(PORT, () => {
     console.log(`Video Service running on http://localhost:${PORT}`);

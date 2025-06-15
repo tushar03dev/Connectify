@@ -6,7 +6,7 @@ import http from 'http';
 import authRoutes from './routes/authRoutes';
 import roomRoutes from './routes/roomRoutes';
 import { Duplex } from 'stream';
-import { createProxyMiddleware } from 'http-proxy-middleware';
+import { createProxyMiddleware, Options } from 'http-proxy-middleware';
 import * as net from "node:net";
 import {authenticateToken} from "./middleware/authMiddleware";
 
@@ -23,10 +23,21 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use('/auth', authRoutes);
 app.use('/rooms', roomRoutes);
-app.use('/video',authenticateToken, createProxyMiddleware({
+
+const videoProxyOptions: Options = {
     target: chatServerTarget,
     changeOrigin: true,
-}));
+    pathRewrite: {
+        '^/video': '/video',
+    },
+    onProxyReq: (proxyReq: any , req: any, res: any) => {
+        console.log(`[Proxy] ${req.method} ${req.originalUrl} → ${chatServerTarget}${req.url}`);
+    },
+} as any;
+
+app.use('/video', authenticateToken, createProxyMiddleware(videoProxyOptions),() => {
+    console.log('Video proxy middleware called');
+});
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     console.error('Server error:', err.stack);

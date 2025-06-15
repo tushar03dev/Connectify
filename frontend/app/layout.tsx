@@ -2,7 +2,9 @@ import type React from "react"
 import {Inter} from "next/font/google"
 import {ThemeProvider} from "@/components/theme-provider"
 import {AuthProvider} from "@/components/auth-provider"
-import "./globals.css"
+import './globals.css'
+import {RoomProvider} from "@/components/room-provider";
+import {VideoProvider} from "@/components/video-provider";
 
 const inter = Inter({subsets: ["latin"]})
 
@@ -33,8 +35,3 @@ export default function RootLayout({
         </html>
     )
 }
-
-
-import './globals.css'
-import {RoomProvider} from "@/components/room-provider";
-import {VideoProvider} from "@/components/video-provider";
