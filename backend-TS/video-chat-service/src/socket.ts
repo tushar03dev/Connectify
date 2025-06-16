@@ -1,9 +1,10 @@
-// socket.ts
 import { Server, Socket } from "socket.io";
 import jwt from "jsonwebtoken";
 import { Room } from "./models/roomModel";
 import mongoose from "mongoose";
-import {User} from "./models/userModel";
+import { User } from "./models/userModel";
+import { Video } from "./models/videoModel"; // Assuming Video model exists
+import { getObjectURL } from "./s3Utils"; // Assuming getObjectURL is in a utils file
 
 interface AuthenticatedSocket extends Socket {
     email?: string;
@@ -27,6 +28,7 @@ interface MessagePayload {
 interface VideoSelectedPayload {
     roomId: string;
     videoUrl: string;
+    videoId: string; // Added to identify video for refresh
 }
 
 interface VidStatePayload {
@@ -42,6 +44,12 @@ interface ProgressBarClickedPayload {
     videoUrl: string;
 }
 
+interface RefreshUrlPayload {
+    roomId: string;
+    videoId: string;
+    newUrl: string;
+}
+
 export const setupSocketIO = (io: Server) => {
     io.use((socket: AuthenticatedSocket, next) => {
         const token = socket.handshake.auth?.token;
@@ -54,7 +62,7 @@ export const setupSocketIO = (io: Server) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as jwt.JwtPayload;
             console.log('Decoded JWT:', decoded);
             socket.email = decoded.email;
-            socket.userName = decoded.email || "User"; // Fallback to email or generic name
+            socket.userName = decoded.email || "User";
             next();
         } catch (err) {
             console.error('JWT verification failed:', err);
@@ -68,13 +76,13 @@ export const setupSocketIO = (io: Server) => {
         const email = socket.email;
         if (!email) {
             console.error('No email found in socket token payload');
-            return
+            return;
         }
 
         const user = await User.findOne({ email });
-        if(!user) {
+        if (!user) {
             console.error('No user found');
-            return
+            return;
         }
 
         socket.on("joinRoom", async ({ roomId }: JoinRoomPayload) => {
@@ -104,31 +112,6 @@ export const setupSocketIO = (io: Server) => {
                 console.error("Join room error:", error);
                 socket.emit("joinRoomResponse", { success: false, error: "Failed to join room" });
             }
-        });socket.on("joinRoom", async ({ roomId }: JoinRoomPayload) => {
-
-            let room = await Room.findOne({ code: roomId });
-            if (!room) {
-                room = new Room({ code: roomId, members: [new mongoose.Types.ObjectId(user._id as mongoose.Types.ObjectId)] });
-            } else {
-                if (Array.isArray(room.members)) {
-                    const userObjectId = new mongoose.Types.ObjectId(user._id as mongoose.Types.ObjectId);
-                    if (!room.members.some(id => id.equals(userObjectId))) {
-                        room.members.push(userObjectId);
-                    }
-                } else {
-                    // fallback in case room.members is undefined or corrupted
-                    room.members = [new mongoose.Types.ObjectId(user._id as mongoose.Types.ObjectId)];
-                }
-            }
-
-            await room.save();
-            socket.join(roomId);
-
-            io.to(roomId).emit("roomUsers", room.members);
-            io.to(roomId).emit("message", {
-                userName: socket.userName || "User",
-                message: `${socket.userName || "A user"} has joined the room.`,
-            });
         });
 
         socket.on("sendMessage", ({ roomId, message }: MessagePayload) => {
@@ -148,29 +131,34 @@ export const setupSocketIO = (io: Server) => {
         });
 
         socket.on("leaveRoom", async ({ roomId }: JoinRoomPayload) => {
-
             const room = await Room.findOne({ code: roomId });
-
-            if (room) {
-                if (Array.isArray(room.members)) {
-                    room.members = room.members.filter((u) => u.toString() !== user._id);
-                    await room.save();
-
-                    socket.leave(roomId);
-                    io.to(roomId).emit("roomUsers", room.members);
-                    io.to(roomId).emit("message", {
-                        userName: socket.userName || "User",
-                        message: `${socket.userName || "A user"} has left the room.`,
-                    });
-                }
+            if (room && Array.isArray(room.members)) {
+                room.members = room.members.filter((u) => u.toString() !== user._id);
+                await room.save();
+                socket.leave(roomId);
+                io.to(roomId).emit("roomUsers", room.members);
+                io.to(roomId).emit("message", {
+                    userName: socket.userName || "User",
+                    message: `${socket.userName || "A user"} has left the room.`,
+                });
             }
         });
 
-        socket.on("video-selected", ({ roomId, videoUrl }: VideoSelectedPayload) => {
-            if (roomId && videoUrl) {
-                io.to(roomId).emit("video-selected", { videoUrl });
-            } else {
-                console.error("Invalid video-selected payload:", { roomId, videoUrl });
+        socket.on("video-selected", async ({ roomId, videoUrl, videoId }: VideoSelectedPayload) => {
+            if (!roomId || !videoUrl || !videoId) {
+                console.error("Invalid video-selected payload:", { roomId, videoUrl, videoId });
+                return;
+            }
+            try {
+                const video = await Video.findById(videoId);
+                if (!video) {
+                    console.error("Video not found:", videoId);
+                    return;
+                }
+                const freshUrl = await getObjectURL(video.filePath); // Refresh URL
+                io.to(roomId).emit("video-selected", { videoUrl: freshUrl, videoId });
+            } catch (error) {
+                console.error("Error validating video:", error);
             }
         });
 
@@ -187,6 +175,24 @@ export const setupSocketIO = (io: Server) => {
                 io.to(roomId).emit("progress-bar-clicked", { newTime, videoUrl });
             } else {
                 console.error("Invalid progress-bar-clicked payload:", { roomId, newTime, videoUrl });
+            }
+        });
+
+        socket.on("refresh-url", async ({ roomId, videoId }: { roomId: string; videoId: string }) => {
+            if (!roomId || !videoId) {
+                console.error("Invalid refresh-url payload:", { roomId, videoId });
+                return;
+            }
+            try {
+                const video = await Video.findById(videoId);
+                if (!video) {
+                    console.error("Video not found:", videoId);
+                    return;
+                }
+                const newUrl = await getObjectURL(video.filePath);
+                io.to(roomId).emit("refresh-url", { roomId, videoId, newUrl });
+            } catch (error) {
+                console.error("Error refreshing URL:", error);
             }
         });
 
