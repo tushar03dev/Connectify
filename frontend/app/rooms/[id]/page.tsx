@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/components/auth-provider"
-import { Pause, Play, Plus, Send, Share2, Video, Volume2, VolumeX } from "lucide-react"
+import {Pause, Play, Plus, Send, Share2, Video, Volume2, VolumeX, X} from "lucide-react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useVideo } from "@/components/video-provider";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,7 @@ export default function RoomPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null)
-  const { video, videos, uploadVideo, getVideos, isLoading } = useVideo()
+  const { video, videos, uploadVideo, getVideos, isLoading, deleteVideo } = useVideo()
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolume] = useState(80)
   const [isMuted, setIsMuted] = useState(false)
@@ -268,6 +268,18 @@ export default function RoomPage() {
     alert("Room link copied to clipboard!")
   }
 
+  const handleDeleteClick = async (videoId: string) => {
+    const confirmed = window.confirm("Are you sure you want to delete this video?")
+    if (confirmed) {
+      const success = await deleteVideo(videoId)
+      if (success) {
+      console.log("Successfully deleted")
+      } else {
+        console.log("Failed to delete")
+      }
+    }
+  }
+
   return (
       <AuthCheck redirectTo="/login">
         <div className="container mx-auto grid min-h-screen grid-rows-[auto_1fr] gap-4 p-4">
@@ -377,7 +389,7 @@ export default function RoomPage() {
             {/* Video List */}
             <div className="space-y-4">
               {videos.map((video) => (
-                  <Card key={video.originalName}>
+                  <Card key={video.originalName} className="relative">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
@@ -419,15 +431,26 @@ export default function RoomPage() {
                                 });
                               }
                             }}
+                            className="transform -translate-x-7"
                         >
                           Play
                         </Button>
                       </div>
                     </CardContent>
+                    {/* Delete Button */}
+                    <button
+                        onClick={() => handleDeleteClick(video._id)}
+                        className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-full bg-muted hover:bg-gray-200 transition-colors duration-200"
+                        aria-label={`Delete ${video.originalName}`}
+                    >
+                      <X
+                          className="w-4 h-4 text-white text-muted-foreground hover:text-red-500 transition-colors duration-200"
+                          strokeWidth={2.5}
+                      />
+                    </button>
                   </Card>
               ))}
             </div>
-
 
             {/* Upload Video */}
             <Card>

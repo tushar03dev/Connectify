@@ -69,7 +69,7 @@ export const uploadVideo = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
-        const s3Key = `uploads/user-uploads/${Date.now()}-${file.originalname}`; // Unique key with timestamp
+        const s3Key = `${Date.now()}-${file.originalname}`; // Unique key with timestamp
         const contentType = file.mimetype;
 
         // Use memory buffer directly from multer (requires `multer` with memoryStorage)
