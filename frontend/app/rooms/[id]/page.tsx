@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid'
 import { useEffect, useRef, useState } from "react"
 import { useParams } from "next/navigation"
 import { AuthCheck } from "@/components/auth-check"
@@ -9,19 +9,21 @@ import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/components/auth-provider"
-import {Pause, Play, Plus, Send, Share2, Video, Volume2, VolumeX, X} from "lucide-react"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useVideo } from "@/components/video-provider";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { io, Socket } from "socket.io-client";
+import { Pause, Play, Plus, Send, Share2, Video, Volume2, VolumeX, X } from "lucide-react"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { useVideo } from "@/components/video-provider"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { io, Socket } from "socket.io-client"
 import { DefaultEventsMap } from "@socket.io/component-emitter"
+import { throttle } from "lodash"
 
 export default function RoomPage() {
   const { id } = useParams()
   const { user } = useAuth()
   const [isUploading, setIsUploading] = useState(false)
-  const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null);
+  const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null)
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null)
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const { video, videos, uploadVideo, getVideos, isLoading, deleteVideo } = useVideo()
   const [isPlaying, setIsPlaying] = useState(false)
@@ -43,8 +45,10 @@ export default function RoomPage() {
 
   const handleVideoUpload = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!videoFile || !id) return
-
+    if (!videoFile || !id) {
+      alert("Please select a video file.")
+      return
+    }
     const success = await uploadVideo(videoFile, id as string)
     if (success) {
       alert("Video uploaded successfully!")
@@ -60,80 +64,124 @@ export default function RoomPage() {
     const token = localStorage.getItem("token");
     if (!token) {
       console.error("No token found in localStorage");
+      alert("Authentication error. Please log in again.");
+      window.location.href = "/login";
       return;
     }
 
-    socketRef.current = io(process.env.NEXT_PUBLIC_API_BASE_URL, {
-      transports: ["websocket", 'polling'],
+    socketRef.current = io(process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:7400", {
+      transports: ["websocket"], // Prefer WebSocket for stability
       auth: { token },
-      path: '/socket.io/',
+      path: "/socket.io/",
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 30000, // 30-second timeout
+      query: { roomId: id }, // Pass roomId for debugging
     });
 
-    socketRef.current?.on("connect", () => {
+    socketRef.current.on("connect", () => {
       console.log("Connected to socket server:", socketRef.current?.id);
       socketRef.current?.emit("joinRoom", { roomId: id });
+      if (selectedVideoId) {
+        socketRef.current?.emit("request-video-state", { roomId: id });
+      }
     });
 
     socketRef.current?.on("connect_error", (error) => {
       console.error("Socket connection error:", error.message, error);
     });
 
-    socketRef.current?.on("joinRoomResponse", (response) => {
+    socketRef.current.on("joinRoom", (response) => {
       console.log("Join room response:", response);
-    });
-
-    socketRef.current?.on("video-selected", ({ videoUrl }) => {
-      console.log("Video selected:", videoUrl);
-      setSelectedVideoPath(videoUrl);
-      if (videoRef.current) {
-        videoRef.current.src = videoUrl;
-        videoRef.current.load();
-        setIsPlaying(false);
-        setCurrentTime(0);
+      if (!response.success) {
+        console.error("Failed to join room:", response.error);
+        alert("Failed to join room: " + response.error);
       }
     });
 
-    socketRef.current?.on("vid-state", (data) => {
-      if (!data || typeof data !== 'object' || !('isPlaying' in data) || !('videoUrl' in data) || !('currentTime' in data)) {
+    socketRef.current.on("video-selected", async ({ videoId }) => {
+      console.log("Video selected:", videoId);
+      if (!videoId || videoId === selectedVideoId) return;
+      try {
+        const token = localStorage.getItem("token");
+        const proxiedUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/video/play/${videoId}`;
+        const response = await fetch(proxiedUrl, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) {
+          console.warn("Failed to fetch signed URL");
+          return;
+        }
+        const data = await response.json();
+        const videoUrl = data.url;
+        if (!videoUrl) {
+          console.error("No URL returned from server");
+          return;
+        }
+        if (videoRef.current && videoRef.current.src !== videoUrl) {
+          setSelectedVideoPath(videoUrl);
+          setSelectedVideoId(videoId);
+          videoRef.current.src = videoUrl;
+          const canPlayPromise = new Promise((resolve) => {
+            const onCanPlay = () => {
+              videoRef.current?.removeEventListener("canplay", onCanPlay);
+              resolve(true);
+            };
+            videoRef.current?.addEventListener("canplay", onCanPlay);
+            videoRef.current?.load();
+          });
+          await canPlayPromise;
+          setIsPlaying(false);
+          setCurrentTime(0);
+        }
+      } catch (error) {
+        console.error("Error fetching signed URL:", error);
+      }
+    });
+
+    socketRef.current.on("vid-state", async (data) => {
+      if (!data || !("isPlaying" in data) || !("videoId" in data) || !("currentTime" in data)) {
         console.error("Invalid vid-state payload:", data);
         return;
       }
-      const { isPlaying, videoUrl, currentTime } = data;
-      if (videoRef.current) {
-        if (videoRef.current.src !== videoUrl) {
-          videoRef.current.src = videoUrl;
-          videoRef.current.load();
+      const { isPlaying, videoId, currentTime, serverTimestamp } = data;
+      if (videoRef.current && videoId === selectedVideoId) {
+        try {
+          const latency = serverTimestamp ? (Date.now() - serverTimestamp) / 1000 : 0;
+          const adjustedTime = currentTime + latency;
+          videoRef.current.currentTime = adjustedTime;
+          if (isPlaying && !videoRef.current.played.length) {
+            document.body.addEventListener(
+                "click",
+                () => {
+                  videoRef.current?.play().catch((error) => {
+                    console.error("Play error:", error);
+                    setIsPlaying(false);
+                    alert(`Failed to play video: ${error.message}`);
+                  });
+                },
+                { once: true }
+            );
+          } else if (!isPlaying) {
+            videoRef.current.pause();
+          }
+          setIsPlaying(isPlaying);
+          setCurrentTime(adjustedTime);
+        } catch (error) {
+          console.error("Error processing vid-state:", error);
         }
-        videoRef.current.currentTime = currentTime;
-        if (isPlaying) {
-          videoRef.current.play().catch((error) => {
-            console.error("Play error:", error);
-            setIsPlaying(false);
-          });
-        } else {
-          videoRef.current.pause();
-        }
-        setIsPlaying(isPlaying);
-        setCurrentTime(currentTime);
       }
     });
 
-    socketRef.current?.on("progress-bar-clicked", ({ newTime, videoUrl }) => {
-      if (videoRef.current) {
-        if (videoRef.current.src !== videoUrl) {
-          videoRef.current.src = videoUrl;
-          videoRef.current.load();
-        }
-        videoRef.current.currentTime = newTime;
-        setCurrentTime(newTime);
-      }
-    });
-
-    socketRef.current?.on("roomUsers", (userList) => {
+    socketRef.current.on("roomUsers", (userList) => {
       console.log("User list updated:", userList);
+      // Update UI with user list
     });
 
-    socketRef.current?.on("receiveMessage", (incomingMessage) => {
+    socketRef.current.on("receiveMessage", (incomingMessage) => {
       console.log("Message received:", incomingMessage);
       const parsedMessage = {
         id: incomingMessage.message?.id || uuidv4(),
@@ -141,23 +189,23 @@ export default function RoomPage() {
         text: incomingMessage.message?.text || "",
         timestamp: incomingMessage.message?.timestamp ? new Date(incomingMessage.message.timestamp) : new Date(),
       };
-      console.log("Parsed message:", parsedMessage);
       setMessages((prevMessages) => {
-        if (prevMessages.some((m) => m.id === parsedMessage.id)) {
-          return prevMessages;
-        }
+        if (prevMessages.some((m) => m.id === parsedMessage.id)) return prevMessages;
         return [...prevMessages, parsedMessage];
       });
     });
 
-    socketRef.current?.on("disconnect", () => {
-      console.log("Disconnected from socket server");
+    socketRef.current.on("disconnect", (reason) => {
+      console.log("Disconnected from socket server:", reason);
+      if (reason === "io server disconnect") {
+        socketRef.current?.connect();
+      }
     });
 
     return () => {
       socketRef.current?.disconnect();
     };
-  }, [id]);
+  }, [id, selectedVideoId]);
 
   useEffect(() => {
     if (id) getVideos(id as string)
@@ -169,27 +217,142 @@ export default function RoomPage() {
     }
   }, [messages])
 
-  const handlePlayPause = () => {
-    if (videoRef.current && selectedVideoPath) {
-      const currentTime = videoRef.current.currentTime;
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play().catch((error) => {
-          console.error("Play error:", error);
-        });
+  useEffect(() => {
+    let syncInterval: NodeJS.Timeout | undefined
+    if (isPlaying && selectedVideoPath && videoRef.current) {
+      syncInterval = setInterval(() => {
+        socketRef.current?.emit("vid-state", {
+          roomId: id,
+          isPlaying: true,
+          videoUrl: selectedVideoPath,
+          currentTime: videoRef.current?.currentTime || 0,
+        })
+      }, 10000) // Sync every 10 seconds
+    }
+    return () => clearInterval(syncInterval)
+  }, [isPlaying, selectedVideoPath, id])
+
+  const handlePlayClick = async (videoId: string) => {
+    if (!videoRef.current || !videoId) {
+      console.error("Invalid video selection:", { videoId, videoRef: !!videoRef.current });
+      alert("Cannot play video: Invalid video or player not ready");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Session expired. Please log in again.");
+        window.location.href = "/login";
+        return;
       }
-      setIsPlaying(!isPlaying);
+
+      // Fetch the signed URL from the proxied endpoint
+      const proxiedUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/video/play/${videoId}`;
+      console.log(`Fetching signed URL from: ${proxiedUrl}`);
+      const response = await fetch(proxiedUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.error("Failed to fetch signed URL", { status: response.status });
+        alert("Failed to load video.");
+        return;
+      }
+
+      const data = await response.json();
+      const videoUrl = data.url;
+      if (!videoUrl) {
+        console.error("No URL returned from server");
+        alert("Failed to load video: No URL provided");
+        return;
+      }
+
+      // Set the video source and wait for it to be ready
+      console.log(`Setting video src: ${videoUrl}`);
+      setSelectedVideoPath(videoUrl);
+      setSelectedVideoId(videoId);
+      if (videoRef.current.src !== videoUrl) {
+        videoRef.current.src = videoUrl;
+        // Wait for the video to load metadata before playing
+        const canPlayPromise = new Promise((resolve) => {
+          const onCanPlay = () => {
+            videoRef.current?.removeEventListener("canplay", onCanPlay);
+            resolve(true);
+          };
+          videoRef.current?.addEventListener("canplay", onCanPlay);
+          videoRef.current?.load();
+        });
+
+        await canPlayPromise;
+      }
+
+      // Ensure play is called after user interaction
+      setIsPlaying(true);
+      await videoRef.current.play().catch((error) => {
+        console.error("Play error:", error);
+        setIsPlaying(false);
+        alert(`Failed to play video: ${error.message}`);
+        throw error;
+      });
+
+      socketRef.current?.emit("video-selected", {
+        roomId: id,
+        videoId,
+      });
       socketRef.current?.emit("vid-state", {
         roomId: id,
-        isPlaying: !isPlaying,
-        videoUrl: selectedVideoPath,
-        currentTime,
+        isPlaying: true,
+        videoId,
+        currentTime: 0,
       });
-    } else {
-      console.error("Cannot toggle play/pause: No video selected");
+    } catch (error) {
+      console.error("Error in video selection:", error);
+      alert("Error playing video. Please try again.");
     }
   };
+
+  const handlePlayPause = throttle(() => {
+    if (!videoRef.current) {
+      console.error("Video ref not available");
+      return;
+    }
+
+    try {
+      if (isPlaying) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+        socketRef.current?.emit("vid-state", {
+          roomId: id,
+          isPlaying: false,
+          videoId: selectedVideoId,
+          currentTime: videoRef.current.currentTime,
+        });
+      } else {
+        videoRef.current.play().then(() => {
+          setIsPlaying(true);
+          if(!videoRef.current) {
+            return;
+          }
+          socketRef.current?.emit("vid-state", {
+            roomId: id,
+            isPlaying: true,
+            videoId: selectedVideoId,
+            currentTime: videoRef.current.currentTime,
+          });
+        }).catch((error) => {
+          console.error("Play error:", error);
+          alert(`Failed to play video: ${error.message}`);
+        });
+      }
+    } catch (error) {
+      console.error("Error in handlePlayPause:", error);
+      alert("Error toggling play/pause. Please try again.");
+    }
+  }, 500); // Throttle to 500ms
 
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0]
@@ -220,15 +383,17 @@ export default function RoomPage() {
 
   const handleSeek = (value: number[]) => {
     const seekTime = value[0]
-    setCurrentTime(seekTime)
-    if (videoRef.current && selectedVideoPath) {
-      videoRef.current.currentTime = seekTime
-      socketRef.current?.emit("progress-bar-clicked", {
-        roomId: id,
-        newTime: seekTime,
-        videoUrl: selectedVideoPath,
-      });
+    if (!videoRef.current || !selectedVideoPath) {
+      console.error("Cannot seek: No video selected or video element not ready")
+      return
     }
+    setCurrentTime(seekTime)
+    videoRef.current.currentTime = seekTime
+    socketRef.current?.emit("progress-bar-clicked", {
+      roomId: id,
+      newTime: seekTime,
+      videoUrl: selectedVideoPath,
+    })
   }
 
   const formatTime = (seconds: number) => {
@@ -238,30 +403,30 @@ export default function RoomPage() {
   }
 
   const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (message.trim() && user && socketRef.current) {
       const newMessage = {
         id: uuidv4(),
         user: user.name || user.email || "User",
         text: message,
         timestamp: new Date(),
-      };
-      console.log("Sending message:", newMessage);
-      setMessages((prevMessages) => [...prevMessages, newMessage]); // Optimistic update
+      }
+      console.log("Sending message:", newMessage)
+      setMessages((prevMessages) => [...prevMessages, newMessage])
       socketRef.current.emit("sendMessage", {
         roomId: id,
         message: newMessage,
       }, (response: any) => {
-        console.log("Send message response:", response);
+        console.log("Send message response:", response)
         if (response?.error) {
-          setMessages((prevMessages) => prevMessages.filter((m) => m.id !== newMessage.id));
+          setMessages((prevMessages) => prevMessages.filter((m) => m.id !== newMessage.id))
         }
-      });
-      setMessage("");
+      })
+      setMessage("")
     } else {
-      console.error("Cannot send message:", { message, user, socket: socketRef.current });
+      console.error("Cannot send message:", { message, user, socket: socketRef.current })
     }
-  };
+  }
 
   const handleShareRoom = () => {
     navigator.clipboard.writeText(window.location.href)
@@ -273,7 +438,7 @@ export default function RoomPage() {
     if (confirmed) {
       const success = await deleteVideo(videoId)
       if (success) {
-      console.log("Successfully deleted")
+        console.log("Successfully deleted")
       } else {
         console.log("Failed to delete")
       }
@@ -292,16 +457,39 @@ export default function RoomPage() {
           </header>
 
           <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-            {/* Video Box */}
             <div className="flex flex-col space-y-4">
               <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
                 <video
                     ref={videoRef}
                     className="h-full w-full"
-                    src={selectedVideoPath || ""}
-                    onTimeUpdate={handleTimeUpdate}
+                    src={selectedVideoPath || undefined}
+                    onTimeUpdate={() => {
+                      if (videoRef.current) {
+                        setCurrentTime(videoRef.current.currentTime);
+                        socketRef.current?.emit("vid-state", {
+                          roomId: id,
+                          isPlaying: !videoRef.current.paused,
+                          videoId: selectedVideoId,
+                          currentTime: videoRef.current.currentTime,
+                          serverTimestamp: Date.now(),
+                        });
+                      }
+                    }}
                     onPlay={() => setIsPlaying(true)}
                     onPause={() => setIsPlaying(false)}
+                    onError={(e) => {
+                      const videoElement = e.target as HTMLVideoElement;
+                      const error = videoElement.error;
+                      console.error("Video element error:", {
+                        message: error?.message,
+                        code: error?.code,
+                        src: videoElement.src,
+                        networkState: videoElement.networkState,
+                        readyState: videoElement.readyState,
+                      });
+                      alert(`Failed to load video: ${error?.message || "Unknown error"} (Code: ${error?.code})`);
+                      setIsPlaying(false);
+                    }}
                 />
               </div>
 
@@ -331,7 +519,6 @@ export default function RoomPage() {
               </div>
             </div>
 
-            {/* Chat Box */}
             <div className="flex flex-col rounded-lg border bg-card shadow-sm">
               <div className="border-b p-3">
                 <h2 className="font-semibold">Chat</h2>
@@ -374,8 +561,8 @@ export default function RoomPage() {
                       className="min-h-[40px] flex-1 resize-none"
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          e.currentTarget.form?.requestSubmit();
+                          e.preventDefault()
+                          e.currentTarget.form?.requestSubmit()
                         }
                       }}
                   />
@@ -386,7 +573,6 @@ export default function RoomPage() {
               </div>
             </div>
 
-            {/* Video List */}
             <div className="space-y-4">
               {videos.map((video) => (
                   <Card key={video.originalName} className="relative">
@@ -402,49 +588,20 @@ export default function RoomPage() {
                         </div>
                         <Button
                             size="sm"
-                            onClick={() => {
-                              const videoUrl = video.streamingUrl;
-                              if (!videoUrl) {
-                                console.error("No video URL available for playback");
-                                alert("Failed to play video: No video URL available");
-                                return;
-                              }
-                              setSelectedVideoPath(videoUrl);
-                              setIsPlaying(true);
-                              if (videoRef.current) {
-                                videoRef.current.src = videoUrl;
-                                videoRef.current.load();
-                                videoRef.current.play().catch((error) => {
-                                  console.error("Play error:", error);
-                                  setIsPlaying(false);
-                                });
-                                // Emit video selection and play state
-                                socketRef.current?.emit("video-selected", {
-                                  roomId: id,
-                                  videoUrl,
-                                });
-                                socketRef.current?.emit("vid-state", {
-                                  roomId: id,
-                                  isPlaying: true,
-                                  videoUrl,
-                                  currentTime: 0,
-                                });
-                              }
-                            }}
+                            onClick={() => handlePlayClick(video._id)}
                             className="transform -translate-x-7"
                         >
                           Play
                         </Button>
                       </div>
                     </CardContent>
-                    {/* Delete Button */}
                     <button
                         onClick={() => handleDeleteClick(video._id)}
                         className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-full bg-muted hover:bg-gray-200 transition-colors duration-200"
                         aria-label={`Delete ${video.originalName}`}
                     >
                       <X
-                          className="w-4 h-4 text-white text-muted-foreground hover:text-red-500 transition-colors duration-200"
+                          className="w-4 h-4 text-muted-foreground hover:text-red-500 transition-colors duration-200"
                           strokeWidth={2.5}
                       />
                     </button>
@@ -452,7 +609,6 @@ export default function RoomPage() {
               ))}
             </div>
 
-            {/* Upload Video */}
             <Card>
               <CardHeader>
                 <CardTitle>Upload a new video</CardTitle>
@@ -463,11 +619,11 @@ export default function RoomPage() {
               <form onSubmit={handleVideoUpload}>
                 <CardContent>
                   <div className="space-y-2">
-                    <Label htmlFor="room-name">Select Video File</Label>
+                    <Label htmlFor="videoFile">Select Video File</Label>
                     <Input
                         type="file"
                         id="videoFile"
-                        accept="video/*"
+                        accept="video/mp4,video/webm"
                         onChange={(e) => {
                           if (e.target.files?.[0]) setVideoFile(e.target.files[0])
                         }}
