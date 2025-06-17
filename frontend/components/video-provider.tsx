@@ -85,7 +85,6 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
                 return false;
             }
 
-
             const response = await axios.get(
                 `${API_BASE_URL}/video/get-videos/${roomId}`,
                 {
@@ -95,26 +94,16 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
                 }
             );
 
-
             if (response.data?.videos) {
-                setVideos(response.data.videos.map((video: any) => ({
-                    ...video,
-                    // Optionally construct streaming URL here
-                    streamingUrl: `${process.env.NEXT_PUBLIC_API_BASE_URL}/video/play/${video._id}`,
-                })))
-                return true
-            }
-            return false
-
-        } catch (error: any) {
-            console.error("Error fetching videos:", error);
-            if (error.response) {
-                console.log("Error response data:", error.response.data);
-                console.log("Status:", error.response.status);
+                setVideos(response.data.videos);
+                return true;
             }
             return false;
+        } catch (error: any) {
+            console.error("Error fetching videos:", error);
+            return false;
         } finally {
-            setIsLoading(false)
+            setIsLoading(false);
         }
     };
 
