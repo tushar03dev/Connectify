@@ -17,7 +17,10 @@ const chatServerTarget = process.env.VIDEO_SERVER_URL;
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    origin: "*",
+    credentials: true,
+}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -25,19 +28,26 @@ app.use('/auth', authRoutes);
 app.use('/rooms', roomRoutes);
 
 const videoProxyOptions: Options = {
-    target: chatServerTarget,
+    target: process.env.VIDEO_SERVER_URL,
     changeOrigin: true,
     pathRewrite: {
-        '^/video': '/video',
+        '^/video/play': '/play', // Map /video/play/:id to /play/:id
+        '^/video': '/', // Map /video/* to /* (e.g., /video/get-videos to /get-videos)
     },
-    onProxyReq: (proxyReq: any , req: any, res: any) => {
-        console.log(`[Proxy] ${req.method} ${req.originalUrl} → ${chatServerTarget}${req.url}`);
+    onProxyReq: (proxyReq: any, req: any, res : any) => {
+        console.log(`Proxying ${req.method} request to: ${req.url} -> ${proxyReq.path}`); // Debug log
+    },
+    onProxyRes: (proxyRes: any, req: any, res: any) => {
+        proxyRes.headers["Access-Control-Allow-Origin"] = "*";
+        proxyRes.headers["Access-Control-Expose-Headers"] = "Content-Length,Content-Type,Accept-Ranges";
+    },
+    onError: (err: any, req: any, res : any) => {
+        console.error("Proxy error:", err);
+        res.status(500).json({ error: "Proxy error", details: err.message });
     },
 } as any;
 
-app.use('/video', authenticateToken, createProxyMiddleware(videoProxyOptions),() => {
-    console.log('Video proxy middleware called');
-});
+app.use('/video', authenticateToken, createProxyMiddleware(videoProxyOptions));
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     console.error('Server error:', err.stack);
@@ -67,8 +77,11 @@ server.listen(PORT, () => {
 
 // Handle WebSocket upgrade requests (important for Socket.IO)
 server.on('upgrade', (req, socket: Duplex, head) => {
-    console.log('Upgrading WebSocket:', req.url);
+    console.log('Upgrading WebSocket:', { url: req.url, headers: req.headers });
     if (socket instanceof net.Socket) {
         socketProxy.upgrade?.(req, socket, head);
+    } else {
+        console.error('Invalid socket type for upgrade');
+        socket.destroy();
     }
 });
