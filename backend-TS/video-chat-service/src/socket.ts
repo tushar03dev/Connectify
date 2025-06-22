@@ -147,7 +147,7 @@ export const setupSocketIO = async (io: Server) => {
             }
             io.to(roomId).emit("receiveMessage", {
                 id: message.id,
-                userName: socket.userName || "User",
+                userName: message.user|| "User",
                 text: message.text,
                 timestamp: message.timestamp,
             });

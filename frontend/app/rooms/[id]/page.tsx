@@ -410,7 +410,7 @@ export default function RoomPage() {
     if (message.trim() && user && socketRef.current) {
       const newMessage = {
         id: uuidv4(),
-        user: user.name || user.email || "User",
+        user: user.name,
         text: message,
         timestamp: new Date(),
       }
