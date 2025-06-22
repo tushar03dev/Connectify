@@ -4,13 +4,23 @@ export interface IRoom extends Document {
     name: string;
     code: string;
     members?: mongoose.Types.ObjectId[];
+    currentVideo?: {
+        videoId: mongoose.Types.ObjectId;
+        isPlaying: boolean;
+        currentTime: number;
+    };
 }
 
 const RoomSchema = new mongoose.Schema<IRoom>({
-    name: { type: String, required: true},
-    code: { type: String, required: true},
-    members: [{ type: Schema.Types.ObjectId, ref: 'User',  default: [], required: true}] ,
-}, {
+    name: {type: String, required: true},
+    code: { type: String, required: true, unique: true },
+    members: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    currentVideo: {
+        videoId: { type: mongoose.Schema.Types.ObjectId, ref: "Video" },
+        isPlaying: { type: Boolean, default: false },
+        currentTime: { type: Number, default: 0 },
+    }
+    }, {
     collection: 'rooms'
 });
 

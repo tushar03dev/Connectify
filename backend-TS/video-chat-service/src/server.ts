@@ -18,7 +18,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL;
 
 const io = new Server(server, {
     cors: {
-        origin: [`${API_GATEWAY_URL}`, `${FRONTEND_URL}`],
+        origin: "*",
         methods: ['GET', 'POST'],
         credentials: true,
     },
@@ -32,7 +32,7 @@ setupSocketIO(io);
 connectDB();
 
 app.use(cors({
-    origin: [`${API_GATEWAY_URL}`, `${FRONTEND_URL}`],
+    origin: "*",
     credentials: true,
 }));
 
@@ -56,8 +56,4 @@ server.listen(PORT, () => {
 
 server.on('error', (error: any) => {
     console.error('Video service server error:', error);
-});
-
-io.on('connection', () => {
-    console.log('Socket.IO connection established');
 });

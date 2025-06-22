@@ -10,12 +10,24 @@ const s3Client = new S3Client({
 });
 
 export async function getObjectURL(key: string) {
-    const command = new GetObjectCommand({
-        Bucket: process.env.AWS_BUCKET_NAME as string,
-        Key: key,
-    });
-    const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
-    return url;
+    try {
+        console.log(`Generating signed URL for key: ${key}, bucket: ${process.env.AWS_BUCKET_NAME}`);
+        const command = new GetObjectCommand({
+            Bucket: process.env.AWS_BUCKET_NAME as string,
+            Key: key,
+        });
+        const url = await getSignedUrl(s3Client, command, { expiresIn: 43200 });
+        console.log(`Signed URL generated: ${url}`);
+        return url;
+    } catch (error: any) {
+        console.error("Error generating signed URL:", {
+            message: error.message,
+            stack: error.stack,
+            key,
+            bucket: process.env.AWS_BUCKET_NAME,
+        });
+        throw error;
+    }
 }
 
 // Upload file stream directly to S3
