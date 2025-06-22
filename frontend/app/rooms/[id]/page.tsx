@@ -415,7 +415,6 @@ export default function RoomPage() {
         timestamp: new Date(),
       }
       console.log("Sending message:", newMessage)
-      setMessages((prevMessages) => [...prevMessages, newMessage])
       socketRef.current.emit("sendMessage", {
         roomId: id,
         message: newMessage,
@@ -425,6 +424,8 @@ export default function RoomPage() {
           setMessages((prevMessages) => prevMessages.filter((m) => m.id !== newMessage.id))
         }
       })
+      newMessage.user = "You"
+      setMessages((prevMessages) => [...prevMessages, newMessage])
       setMessage("")
     } else {
       console.error("Cannot send message:", { message, user, socket: socketRef.current })
