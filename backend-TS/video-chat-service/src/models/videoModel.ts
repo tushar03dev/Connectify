@@ -24,8 +24,4 @@ const VideoSchema = new mongoose.Schema<IVideo>(
     }
 );
 
-
-VideoSchema.index({ roomId: 1 }); // Index for queries by roomId
-VideoSchema.index({ filePath: 1 }); // Index for queries by S3 key
-
 export const Video = mongoose.model<IVideo>('Video', VideoSchema);

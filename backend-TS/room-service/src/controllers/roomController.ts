@@ -48,20 +48,20 @@ export const createRoom = async (req: Request, res: Response): Promise<void> => 
 };
 
 
-export const joinRoom = async (req: Request, res: Response):Promise<void> => {
+export const joinRoom = async (req: Request, res: Response): Promise<void> => {
     try {
-        const {code, userId} = req.body;
+        const { code, userId } = req.body;
         console.log(code, userId);
-        const room = await Room.findOne({code});
 
+        const room = await Room.findOne({ code });
         if (!room) {
-            res.status(404).json({success: false, message: 'Room not found'});
+            res.status(404).json({ success: false, message: 'Room not found' });
             return;
         }
 
-        const user = await User.findOne({email: userId});
+        const user = await User.findOne({ email: userId });
         if (!user) {
-            res.status(400).json({message: 'User does not exists'});
+            res.status(400).json({ success: false, message: 'User does not exist' });
             return;
         }
 
@@ -69,7 +69,6 @@ export const joinRoom = async (req: Request, res: Response):Promise<void> => {
             if (!user.rooms.includes(room._id as mongoose.Types.ObjectId)) {
                 user.rooms.push(room._id as mongoose.Types.ObjectId);
                 await user.save();
-                res.status(201).json({success: true, room: room});
             }
         }
 
@@ -79,12 +78,15 @@ export const joinRoom = async (req: Request, res: Response):Promise<void> => {
                 await room.save();
             }
         }
-        res.status(200).json({success: true, room});
+
+        res.status(200).json({ success: true, room });
+
     } catch (error) {
         console.error(error);
-        res.status(500).json({success: false, message: 'Internal server error'});
+        res.status(500).json({ success: false, message: 'Internal server error' });
     }
-}
+};
+
 
 export const getRooms = async (req: Request, res: Response):Promise<void> => {
     try {

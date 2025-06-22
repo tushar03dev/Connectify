@@ -49,163 +49,183 @@ export default function RoomPage() {
       alert("Please select a video file.")
       return
     }
-    const success = await uploadVideo(videoFile, id as string)
-    if (success) {
-      alert("Video uploaded successfully!")
-      await getVideos(id as string)
-    } else {
-      alert("Video upload failed.")
+    setIsUploading(true)
+    try {
+      const success = await uploadVideo(videoFile, id as string)
+      if (success) {
+        alert("Video uploaded successfully!")
+        await getVideos(id as string)
+        // Emit socket event to notify other users
+        socketRef.current?.emit("videoUploaded", { roomId: id })
+      } else {
+        alert("Video upload failed.")
+      }
+    } catch (error) {
+      console.error("Error uploading video:", error)
+      alert("Error uploading video. Please try again.")
+    } finally {
+      setIsUploading(false)
     }
   }
 
   const socketRef = useRef<Socket<DefaultEventsMap, DefaultEventsMap> | null>(null)
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token")
     if (!token) {
-      console.error("No token found in localStorage");
-      alert("Authentication error. Please log in again.");
-      window.location.href = "/login";
-      return;
+      console.error("No token found in localStorage")
+      alert("Authentication error. Please log in again.")
+      window.location.href = "/login"
+      return
     }
 
-    socketRef.current = io(process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:7400", {
-      transports: ["websocket"], // Prefer WebSocket for stability
+    socketRef.current = io(process.env.NEXT_PUBLIC_API_BASE_URL, {
+      transports: ["websocket"],
       auth: { token },
       path: "/socket.io/",
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      timeout: 30000, // 30-second timeout
-      query: { roomId: id }, // Pass roomId for debugging
-    });
+      timeout: 30000,
+      query: { roomId: id },
+    })
 
     socketRef.current.on("connect", () => {
-      console.log("Connected to socket server:", socketRef.current?.id);
-      socketRef.current?.emit("joinRoom", { roomId: id });
-      if (selectedVideoId) {
-        socketRef.current?.emit("request-video-state", { roomId: id });
-      }
-    });
+      console.log("Socket connected, ID:", socketRef.current?.id)
+      setTimeout(() => {
+        if (socketRef.current?.connected) {
+          console.log("Emitting joinRoom with roomId:", id)
+          socketRef.current?.emit("joinRoom", { roomId: id })
+          if (selectedVideoId) {
+            socketRef.current?.emit("request-video-state", { roomId: id })
+          }
+        } else {
+          console.error("Socket not connected when trying to emit joinRoom")
+        }
+      }, 100)
+    })
 
     socketRef.current?.on("connect_error", (error) => {
-      console.error("Socket connection error:", error.message, error);
-    });
+      console.error("Socket connection error:", {
+        message: error.message,
+        cause: error.cause,
+        stack: error.stack,
+      })
+    })
 
     socketRef.current.on("joinRoom", (response) => {
-      console.log("Join room response:", response);
+      console.log("Join room response:", response)
       if (!response.success) {
-        console.error("Failed to join room:", response.error);
-        alert("Failed to join room: " + response.error);
+        console.error("Failed to join room:", response.error)
+        alert("Failed to join room: " + response.error)
+      }
+    })
+
+    socketRef.current.on("joinRoomResponse", (response) => {
+      console.log("Join room response:", response)
+      if (!response.success) {
+        console.error("Failed to join room:", response.error)
+        alert("Failed to join room: " + response.error)
+      }
+    })
+
+    socketRef.current.on("video-selected",({ videoUrl }) => {
+      setSelectedVideoPath(videoUrl);
+      if (videoRef.current) {
+        videoRef.current.src = videoUrl;
+        videoRef.current.load();
+        setIsPlaying(false); // Reset play state
+        setCurrentTime(0); // Reset time
       }
     });
 
-    socketRef.current.on("video-selected", async ({ videoId }) => {
-      console.log("Video selected:", videoId);
-      if (!videoId || videoId === selectedVideoId) return;
-      try {
-        const token = localStorage.getItem("token");
-        const proxiedUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/video/play/${videoId}`;
-        const response = await fetch(proxiedUrl, {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) {
-          console.warn("Failed to fetch signed URL");
-          return;
-        }
-        const data = await response.json();
-        const videoUrl = data.url;
-        if (!videoUrl) {
-          console.error("No URL returned from server");
-          return;
-        }
-        if (videoRef.current && videoRef.current.src !== videoUrl) {
-          setSelectedVideoPath(videoUrl);
-          setSelectedVideoId(videoId);
-          videoRef.current.src = videoUrl;
-          const canPlayPromise = new Promise((resolve) => {
-            const onCanPlay = () => {
-              videoRef.current?.removeEventListener("canplay", onCanPlay);
-              resolve(true);
-            };
-            videoRef.current?.addEventListener("canplay", onCanPlay);
-            videoRef.current?.load();
-          });
-          await canPlayPromise;
-          setIsPlaying(false);
-          setCurrentTime(0);
-        }
-      } catch (error) {
-        console.error("Error fetching signed URL:", error);
-      }
-    });
-
-    socketRef.current.on("vid-state", async (data) => {
-      if (!data || !("isPlaying" in data) || !("videoId" in data) || !("currentTime" in data)) {
+    socketRef.current?.on("vid-state", (data) => {
+      if (!data || typeof data !== 'object' || !('isPlaying' in data) || !('videoUrl' in data) || !('currentTime' in data)) {
         console.error("Invalid vid-state payload:", data);
         return;
       }
-      const { isPlaying, videoId, currentTime, serverTimestamp } = data;
-      if (videoRef.current && videoId === selectedVideoId) {
-        try {
-          const latency = serverTimestamp ? (Date.now() - serverTimestamp) / 1000 : 0;
-          const adjustedTime = currentTime + latency;
-          videoRef.current.currentTime = adjustedTime;
-          if (isPlaying && !videoRef.current.played.length) {
-            document.body.addEventListener(
-                "click",
-                () => {
-                  videoRef.current?.play().catch((error) => {
-                    console.error("Play error:", error);
-                    setIsPlaying(false);
-                    alert(`Failed to play video: ${error.message}`);
-                  });
-                },
-                { once: true }
-            );
-          } else if (!isPlaying) {
-            videoRef.current.pause();
-          }
-          setIsPlaying(isPlaying);
-          setCurrentTime(adjustedTime);
-        } catch (error) {
-          console.error("Error processing vid-state:", error);
+      const { isPlaying, videoUrl, currentTime } = data;
+      if (videoRef.current) {
+        // Ensure the correct video is loaded
+        if (videoRef.current.src !== videoUrl) {
+          videoRef.current.src = videoUrl;
+          videoRef.current.load();
         }
+        videoRef.current.currentTime = currentTime;
+        if (isPlaying) {
+          videoRef.current.play().catch((error) => {
+            console.error("Play error:", error);
+            setIsPlaying(false);
+          });
+        } else {
+          videoRef.current.pause();
+        }
+        setIsPlaying(isPlaying);
+        setCurrentTime(currentTime);
+      }
+    });
+
+    // Handle seek (progress bar movement)
+    socketRef.current?.on("progress-bar-clicked", ({ newTime, videoUrl }) => {
+      if (videoRef.current) {
+        if (videoRef.current.src !== videoUrl) {
+          videoRef.current.src = videoUrl;
+          videoRef.current.load();
+        }
+        videoRef.current.currentTime = newTime;
+        setCurrentTime(newTime);
       }
     });
 
     socketRef.current.on("roomUsers", (userList) => {
-      console.log("User list updated:", userList);
+      console.log("User list updated:", userList)
       // Update UI with user list
-    });
+    })
 
     socketRef.current.on("receiveMessage", (incomingMessage) => {
-      console.log("Message received:", incomingMessage);
+      console.log("Received receiveMessage:", incomingMessage)
       const parsedMessage = {
-        id: incomingMessage.message?.id || uuidv4(),
+        id: incomingMessage.id || uuidv4(),
         user: incomingMessage.userName || "Unknown User",
-        text: incomingMessage.message?.text || "",
-        timestamp: incomingMessage.message?.timestamp ? new Date(incomingMessage.message.timestamp) : new Date(),
-      };
+        text: incomingMessage.text || "",
+        timestamp: incomingMessage.timestamp ? new Date(incomingMessage.timestamp) : new Date(),
+      }
+      console.log("Parsed message:", parsedMessage)
       setMessages((prevMessages) => {
-        if (prevMessages.some((m) => m.id === parsedMessage.id)) return prevMessages;
-        return [...prevMessages, parsedMessage];
-      });
-    });
+        if (prevMessages.some((m) => m.id === parsedMessage.id)) {
+          console.warn("Duplicate message filtered out:", parsedMessage.id)
+          return prevMessages
+        }
+        return [...prevMessages, parsedMessage]
+      })
+    })
+
+    // socketRef.current.on("videoListUpdated", async () => {
+    //   console.log("Received videoListUpdated event for room:", id)
+    //   try {
+    //     await getVideos(id as string)
+    //   } catch (error) {
+    //     console.error("Error fetching updated video list:", error)
+    //   }
+    // })
 
     socketRef.current.on("disconnect", (reason) => {
-      console.log("Disconnected from socket server:", reason);
+      console.log("Disconnected from socket server:", reason)
       if (reason === "io server disconnect") {
-        socketRef.current?.connect();
+        socketRef.current?.connect()
       }
-    });
+    })
+
+    socketRef.current.on("error", (error) => {
+      console.error("Socket.IO error:", error)
+      alert(`Socket error: ${error}`)
+    })
 
     return () => {
-      socketRef.current?.disconnect();
-    };
-  }, [id, selectedVideoId]);
+      socketRef.current?.disconnect()
+    }
+  }, [id, selectedVideoId])
 
   useEffect(() => {
     if (id) getVideos(id as string)
@@ -234,125 +254,108 @@ export default function RoomPage() {
 
   const handlePlayClick = async (videoId: string) => {
     if (!videoRef.current || !videoId) {
-      console.error("Invalid video selection:", { videoId, videoRef: !!videoRef.current });
-      alert("Cannot play video: Invalid video or player not ready");
-      return;
+      console.error("Invalid video selection:", { videoId, videoRef: !!videoRef.current })
+      alert("Cannot play video: Invalid video or player not ready")
+      return
     }
 
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token")
       if (!token) {
-        alert("Session expired. Please log in again.");
-        window.location.href = "/login";
-        return;
+        alert("Session expired. Please log in again.")
+        window.location.href = "/login"
+        return
       }
 
-      // Fetch the signed URL from the proxied endpoint
-      const proxiedUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/video/play/${videoId}`;
-      console.log(`Fetching signed URL from: ${proxiedUrl}`);
+      const proxiedUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/video/play/${videoId}`
+      console.log(`Fetching signed URL from: ${proxiedUrl}`)
       const response = await fetch(proxiedUrl, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      });
+      })
 
       if (!response.ok) {
-        console.error("Failed to fetch signed URL", { status: response.status });
-        alert("Failed to load video.");
-        return;
+        const errorText = await response.text()
+        console.error("Failed to fetch signed URL", { status: response.status, errorText })
+        alert(`Failed to load video: ${errorText}`)
+        return
       }
 
-      const data = await response.json();
-      const videoUrl = data.url;
+      const data = await response.json()
+      const videoUrl = data.url
       if (!videoUrl) {
-        console.error("No URL returned from server");
-        alert("Failed to load video: No URL provided");
-        return;
+        console.error("No URL returned from server", { response: data })
+        alert("Failed to load video: No URL provided")
+        return
       }
 
-      // Set the video source and wait for it to be ready
-      console.log(`Setting video src: ${videoUrl}`);
-      setSelectedVideoPath(videoUrl);
-      setSelectedVideoId(videoId);
-      if (videoRef.current.src !== videoUrl) {
-        videoRef.current.src = videoUrl;
-        // Wait for the video to load metadata before playing
-        const canPlayPromise = new Promise((resolve) => {
-          const onCanPlay = () => {
-            videoRef.current?.removeEventListener("canplay", onCanPlay);
-            resolve(true);
-          };
-          videoRef.current?.addEventListener("canplay", onCanPlay);
-          videoRef.current?.load();
-        });
+      console.log(`Setting video src: ${videoUrl}`)
+      setSelectedVideoPath(videoUrl)
+      setSelectedVideoId(videoId)
+      // if (videoRef.current.src !== videoUrl) {
+      //   videoRef.current.src = videoUrl
+      //   const canPlayPromise = new Promise((resolve, reject) => {
+      //     const onCanPlay = () => {
+      //       videoRef.current?.removeEventListener("canplay", onCanPlay)
+      //       resolve(true)
+      //     }
+      //     const onError = (e: Event) => {
+      //       videoRef.current?.removeEventListener("error", onError)
+      //       reject(new Error(`Video load error: ${e.type}`))
+      //     }
+      //     videoRef.current?.addEventListener("canplay", onCanPlay)
+      //     videoRef.current?.addEventListener("error", onError)
+      //     videoRef.current?.load()
+      //   })
+      //
+      //   await canPlayPromise
+      // }
 
-        await canPlayPromise;
-      }
+     // await videoRef.current.play()
+      setIsPlaying(true)
 
-      // Ensure play is called after user interaction
-      setIsPlaying(true);
-      await videoRef.current.play().catch((error) => {
-        console.error("Play error:", error);
-        setIsPlaying(false);
-        alert(`Failed to play video: ${error.message}`);
-        throw error;
-      });
-
+      // emit the video selection and play state
       socketRef.current?.emit("video-selected", {
         roomId: id,
-        videoId,
-      });
+        videoUrl,
+      })
       socketRef.current?.emit("vid-state", {
         roomId: id,
         isPlaying: true,
-        videoId,
+        videoUrl,
         currentTime: 0,
-      });
-    } catch (error) {
-      console.error("Error in video selection:", error);
-      alert("Error playing video. Please try again.");
+        serverTimestamp: Date.now(),
+      })
+    } catch (error: unknown) {
+      const err = error as Error
+      console.error("Error in video selection:", err)
+      alert(`Error playing video: ${err.message}`)
     }
-  };
+  }
 
-  const handlePlayPause = throttle(() => {
-    if (!videoRef.current) {
-      console.error("Video ref not available");
-      return;
-    }
-
-    try {
+  const handlePlayPause = () => {
+    if (videoRef.current && selectedVideoPath) {
+      const currentTime = videoRef.current.currentTime;
       if (isPlaying) {
         videoRef.current.pause();
-        setIsPlaying(false);
-        socketRef.current?.emit("vid-state", {
-          roomId: id,
-          isPlaying: false,
-          videoId: selectedVideoId,
-          currentTime: videoRef.current.currentTime,
-        });
       } else {
-        videoRef.current.play().then(() => {
-          setIsPlaying(true);
-          if(!videoRef.current) {
-            return;
-          }
-          socketRef.current?.emit("vid-state", {
-            roomId: id,
-            isPlaying: true,
-            videoId: selectedVideoId,
-            currentTime: videoRef.current.currentTime,
-          });
-        }).catch((error) => {
+        videoRef.current.play().catch((error) => {
           console.error("Play error:", error);
-          alert(`Failed to play video: ${error.message}`);
         });
       }
-    } catch (error) {
-      console.error("Error in handlePlayPause:", error);
-      alert("Error toggling play/pause. Please try again.");
+      setIsPlaying(!isPlaying);
+      socketRef.current?.emit("vid-state", {
+        roomId: id,
+        isPlaying: !isPlaying,
+        videoUrl: selectedVideoPath,
+        currentTime,
+      });
+    } else {
+      console.error("Cannot toggle play/pause: No video selected");
     }
-  }, 500); // Throttle to 500ms
+  }
 
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0]
@@ -465,30 +468,30 @@ export default function RoomPage() {
                     src={selectedVideoPath || undefined}
                     onTimeUpdate={() => {
                       if (videoRef.current) {
-                        setCurrentTime(videoRef.current.currentTime);
+                        setCurrentTime(videoRef.current.currentTime)
                         socketRef.current?.emit("vid-state", {
                           roomId: id,
                           isPlaying: !videoRef.current.paused,
                           videoId: selectedVideoId,
                           currentTime: videoRef.current.currentTime,
                           serverTimestamp: Date.now(),
-                        });
+                        })
                       }
                     }}
                     onPlay={() => setIsPlaying(true)}
                     onPause={() => setIsPlaying(false)}
                     onError={(e) => {
-                      const videoElement = e.target as HTMLVideoElement;
-                      const error = videoElement.error;
+                      const videoElement = e.target as HTMLVideoElement
+                      const error = videoElement.error
                       console.error("Video element error:", {
                         message: error?.message,
                         code: error?.code,
                         src: videoElement.src,
                         networkState: videoElement.networkState,
                         readyState: videoElement.readyState,
-                      });
-                      alert(`Failed to load video: ${error?.message || "Unknown error"} (Code: ${error?.code})`);
-                      setIsPlaying(false);
+                      })
+                      alert(`Failed to load video: ${error?.message || "Unknown error"} (Code: ${error?.code})`)
+                      setIsPlaying(false)
                     }}
                 />
               </div>
@@ -499,8 +502,8 @@ export default function RoomPage() {
                     {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
                   </Button>
                   <span className="text-sm">
-                  {formatTime(currentTime)} / {formatTime(duration)}
-                </span>
+                    {formatTime(currentTime)} / {formatTime(duration)}
+                  </span>
                   <div className="flex items-center space-x-2">
                     <Button
                         variant="ghost"
@@ -535,11 +538,11 @@ export default function RoomPage() {
                             <div className="flex items-center space-x-2">
                               <span className="font-medium">{msg.user}</span>
                               <span className="text-xs text-muted-foreground">
-                          {msg.timestamp ? msg.timestamp.toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          }) : ""}
-                        </span>
+                                {msg.timestamp ? msg.timestamp.toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }) : ""}
+                              </span>
                             </div>
                             <p className="mt-1">{msg.text}</p>
                           </div>
@@ -631,8 +634,8 @@ export default function RoomPage() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading ? "Uploading..." : "Upload Video"}
+                  <Button type="submit" disabled={isLoading || isUploading}>
+                    {isLoading || isUploading ? "Uploading..." : "Upload Video"}
                   </Button>
                 </CardFooter>
               </form>

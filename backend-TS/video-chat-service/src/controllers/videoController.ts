@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import { Video } from "../models/videoModel";
 import { Room } from "../models/roomModel";
 import {deleteFromS3, getObjectURL, uploadToS3} from "../utils/s3Utils";
+import axios from "axios";
 
 dotenv.config();
 
@@ -50,20 +51,35 @@ export const uploadVideo = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
-// Stream video via S3 signed URL
 export const streamVideoById = async (req: Request, res: Response): Promise<void> => {
     try {
-        const video = await Video.findById(req.params.id);
+        const videoId = req.params.id;
+        console.log(`Fetching video with ID: ${videoId}`);
+        const video = await Video.findById(videoId);
         if (!video) {
-            res.status(404).json({ error: "Video not found" });
+            console.error(`Video not found for ID: ${videoId}`);
+            res.status(404).json({ error: `Video not found for ID: ${videoId}` });
             return;
         }
-
+        console.log(`Video found: ${video.originalName}, filePath: ${video.filePath}`);
         const signedUrl = await getObjectURL(video.filePath);
-        res.redirect(signedUrl); // Client streams directly from S3
-    } catch (error) {
-        console.error("Error streaming video:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+        console.log(`Generated S3 signed URL: ${signedUrl}`);
+
+        // Set headers and return the signed URL
+        res.set({
+            "Content-Type": video.contentType || "video/mp4",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Expose-Headers": "Content-Length,Content-Type,Accept-Ranges",
+        });
+        res.status(200).json({ url: signedUrl });
+    } catch (error: any) {
+        console.error("Error fetching video URL:", {
+            message: error.message,
+            stack: error.stack,
+            videoId: req.params.id,
+            method: req.method,
+        });
+        res.status(500).json({ error: "Internal Server Error", details: error.message });
     }
 };
 
