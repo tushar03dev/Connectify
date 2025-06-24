@@ -1,0 +1,46 @@
+services:
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "5000:5000"
+    depends_on:
+      - auth-service
+      - room-service
+      - video-chat-service
+    networks:
+      - backend
+
+  auth-service:
+    build: ./auth-service
+    ports:
+      - "5001:5001"
+    networks:
+      - backend
+
+  room-service:
+    build: ./room-service
+    ports:
+      - "5002:5002"
+    networks:
+      - backend
+
+  video-chat-service:
+    build: ./video-chat-service
+    ports:
+      - "5003:5003"
+    networks:
+      - backend
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "80:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - backend
+
+networks:
+  backend:
