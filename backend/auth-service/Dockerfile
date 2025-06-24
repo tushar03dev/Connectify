@@ -31,7 +31,7 @@ RUN npm install
 COPY .env .env
 
 # App port
-EXPOSE 5000
+EXPOSE 5001
 
 # Start app
 CMD ["npm", "start"]

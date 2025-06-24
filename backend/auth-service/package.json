@@ -9,7 +9,7 @@
     "dev": "nodemon --watch src --exec ts-node -r tsconfig-paths/register src/server.ts"
   },
   "keywords": [],
-  "author": "",
+  "author": "Tushar Sharma",
   "license": "ISC",
   "description": "",
   "dependencies": {
