@@ -1,17 +1,37 @@
-FROM node:18-alpine
+# Stage 1: Build TypeScript
+FROM node:18 AS builder
 
-# Set working directory inside container
+# Create app directory
 WORKDIR /app
 
-# Copy dependency files and install
+# Copy package files and install deps
 COPY package*.json ./
 RUN npm install
 
-# Copy application source code
+# Copy source code
 COPY . .
 
-# Expose the app port
+# Compile TypeScript
+RUN npm run build
+
+# Stage 2: Production image
+FROM node:18-slim
+
+# Set working directory
+WORKDIR /src
+
+# Only copy compiled output and necessary files
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package*.json ./
+
+# Install devs
+RUN npm install
+
+# Copy .env if needed (optional)
+COPY .env .env
+
+# App port
 EXPOSE 5000
 
-# Start the server
-CMD ["npm", "run", "dev"]
+# Start app
+CMD ["npm", "start"]
