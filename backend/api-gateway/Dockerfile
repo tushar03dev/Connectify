@@ -28,7 +28,7 @@ COPY --from=builder /app/package*.json ./
 RUN npm install
 
 # Copy .env if needed (optional)
-# COPY .env .env
+COPY .env .env
 
 # App port
 EXPOSE 5000
