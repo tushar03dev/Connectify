@@ -7,7 +7,7 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import otpRoutes from "./routes/otpRoutes";
 import {authConsumer} from "./consumers/authConsumer";
-import redisClient from "./config/redis";
+import {connectRedis} from "./config/redis";
 
 dotenv.config();
 
@@ -20,7 +20,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // MongoDB Connection
 connectDB().then(async ()=> {
     await authConsumer();
-    await redisClient.connect();
+    await connectRedis();
     console.log('Redis connected');
 });
 
