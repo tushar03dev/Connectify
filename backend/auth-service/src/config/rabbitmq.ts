@@ -9,9 +9,20 @@ let channel: amqp.Channel | null = null;
 
 async function setupRabbitMQ() {
     if (!connection) {
-        connection = await amqp.connect(RABBITMQ_URL);
-        channel = await connection.createChannel();
-        console.log("RabbitMQ Connected & Channel Created for Auth Service");
+        let attempts = 10;
+        while (attempts > 0) {
+            try {
+                connection = await amqp.connect(RABBITMQ_URL);
+                channel = await connection.createChannel();
+                console.log("RabbitMQ Connected & Channel Created for Auth Service");
+                return channel;
+            } catch (err) {
+                console.log(`⏳ RabbitMQ connection failed. Retrying in 3s... (${11 - attempts}/10)`);
+                attempts--;
+                await new Promise(res => setTimeout(res, 3000));
+            }
+        }
+        throw new Error('Failed to connect to RabbitMQ after 10 attempts');
     }
     return channel;
 }
