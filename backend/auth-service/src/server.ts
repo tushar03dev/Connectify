@@ -1,6 +1,5 @@
 import express from 'express';
 import {Response} from 'express';
-import authRoutes from './routes/authRoutes';
 import dotenv from 'dotenv';
 import connectDB from './config/db';
 import bodyParser from 'body-parser';
@@ -20,11 +19,16 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // MongoDB Connection
 connectDB().then(async ()=> {
     await authConsumer();
-    await connectRedis();
-    console.log('Redis connected');
+    await connectRedis().then( async() => {
+        const authRoutes = (await import('./routes/authRoutes')).default;
+        app.use('/auth', authRoutes);
+        console.log('Redis connected');
+        }
+    );
+
 });
 
-app.use('/auth', authRoutes);
+
 app.use('/otp',otpRoutes);
 
 //Error-handling middleware

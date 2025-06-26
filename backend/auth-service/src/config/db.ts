@@ -3,19 +3,25 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const connectDB = async () => {
-    try {
-        const uri = process.env.MONGO_URI as string;  // Fetch the URI from env
-        if (!uri) {
-            throw new Error('MongoDB URI is not defined in the environment variables for Auth Service');
-        }
-        await mongoose.connect(uri,{});
-        console.log('MongoDB connected for Auth Service');
-    } catch (error) {
-        console.error('MongoDB connection error for Auth Service:', error);
-        process.exit(1); // Exit the process with failure
-    }
-};
+const uri = process.env.MONGO_URI as string;
 
+export const connectDB = async () => {
+    let attempts = 10;
+    while (attempts > 0) {
+        try {
+            if (!uri) {
+                throw new Error('MongoDB URI is not defined in the environment variables for Auth Service');
+            }
+            await mongoose.connect(uri,{});
+            console.log('Connected to MongoDB');
+            return;
+        } catch (err) {
+            console.log(`MongoDB connection failed. Retrying in 3s... (${11 - attempts}/10)`);
+            attempts--;
+            await new Promise(res => setTimeout(res, 3000));
+        }
+    }
+    throw new Error('Failed to connect to MongoDB after 10 attempts');
+};
 
 export default connectDB;

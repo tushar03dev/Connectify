@@ -5,7 +5,9 @@ import {User} from '../models/userModel';
 import dotenv from 'dotenv';
 import {sendOTP, verifyOTP} from "./otpController";
 import {publishToQueue} from "../config/rabbitmq";
-import redisClient from '../config/redis';
+import {getRedisClient} from '../config/redis';
+
+const redisClient = getRedisClient();
 
 dotenv.config();
 
