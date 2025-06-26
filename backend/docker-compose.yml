@@ -1,4 +1,19 @@
 services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - backend
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"  # Web UI
+    networks:
+      - backend
+
   api-gateway:
     build: ./api-gateway
     ports:
@@ -14,6 +29,9 @@ services:
     build: ./auth-service
     ports:
       - "5001:5001"
+    depends_on:
+      - redis
+      - rabbitmq
     networks:
       - backend
 
