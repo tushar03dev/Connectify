@@ -27,8 +27,8 @@ COPY --from=builder /app/package*.json ./
 # Install devs
 RUN npm install
 
-# Copy .env if needed (optional)
-COPY .env .env
+# Copy .env
+COPY .env.production .env
 
 # App port
 EXPOSE 5001
