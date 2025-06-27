@@ -27,7 +27,7 @@ COPY --from=builder /app/package*.json ./
 # Install devs
 RUN npm install
 
-# Copy .env if needed (optional)
+# Copy .env.development if needed (optional)
 COPY .env .env
 
 # App port

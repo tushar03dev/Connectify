@@ -7,8 +7,6 @@ import {sendOTP, verifyOTP} from "./otpController";
 import {publishToQueue} from "../config/rabbitmq";
 import {getRedisClient} from '../config/redis';
 
-const redisClient = getRedisClient();
-
 dotenv.config();
 
 export const signUp = async (req: Request, res: Response, next: NextFunction) => {
@@ -30,6 +28,7 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
 
         // Store user temporarily in Redis using the OTP token as key
         const tempUserData = JSON.stringify({ name, email, password });
+        const redisClient = getRedisClient();
         await redisClient.setEx(`signup:${otpToken}`, 300, tempUserData); // Expires in 5 minutes
 
         return res.status(200).json({success: true, otpToken, message: 'OTP sent to your email. Please enter the OTP to complete sign-up.' });
@@ -51,7 +50,7 @@ export const completeSignUp = async (req: Request, res: Response, next: NextFunc
 
         // If OTP verification was successful, proceed with account creation
         if (otpVerificationResult.success) {
-
+            const redisClient = getRedisClient();
             const userDataStr = await redisClient.get(`signup:${otpToken}`);
             if (!userDataStr) {
                 return res.status(400).json({ message: 'No user data found or token expired.' });
