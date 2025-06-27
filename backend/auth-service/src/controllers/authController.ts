@@ -7,7 +7,8 @@ import {sendOTP, verifyOTP} from "./otpController";
 import {publishToQueue} from "../config/rabbitmq";
 import {getRedisClient} from '../config/redis';
 
-dotenv.config();
+const env = process.env.NODE_ENV;
+dotenv.config({ path: `.env.${env}` });
 
 export const signUp = async (req: Request, res: Response, next: NextFunction) => {
     const {name, email, password} = req.body;

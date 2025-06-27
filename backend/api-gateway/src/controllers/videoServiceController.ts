@@ -3,7 +3,8 @@ import dotenv from "dotenv";
 import {AuthRequest} from "../middleware/authMiddleware";
 import axios from "axios";
 
-dotenv.config();
+const env = process.env.NODE_ENV;
+dotenv.config({ path: `.env.${env}` });
 const VIDEO_SERVICE_URL = process.env.VIDEO_SERVER_URL;
 
 export async function streamVideoById(req: AuthRequest, res: Response): Promise<void> {

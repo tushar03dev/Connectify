@@ -5,7 +5,8 @@ import { Room } from "../models/roomModel";
 import {deleteFromS3, getObjectURL, uploadToS3} from "../utils/s3Utils";
 import axios from "axios";
 
-dotenv.config();
+const env = process.env.NODE_ENV;
+dotenv.config({ path: `.env.${env}` });
 
 // Upload video directly to S3
 export const uploadVideo = async (req: Request, res: Response): Promise<void> => {

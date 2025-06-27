@@ -1,15 +1,15 @@
 import amqp from "amqplib";
 import { User } from "../models/userModel";
-import Redis from "ioredis";
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
+import {getRedisClient} from "../config/redis";
 
-dotenv.config();
+const env = process.env.NODE_ENV;
+dotenv.config({ path: `.env.${env}` });
 const RABBITMQ_URL = process.env.RABBITMQ_URL as string;
 
 const BATCH_SIZE = 50; // Number of users processed at once
 const batch: any[] = [];
-const redisClient = new Redis();
 
 async function connectRabbitMQ() {
     const connection = await amqp.connect(RABBITMQ_URL);
@@ -32,11 +32,12 @@ async function processSignups(channel: amqp.Channel) {
             return;
         }
 
+        const redisClient = getRedisClient();
         // Check Redis cache for duplicate prevention
         if (await redisClient.get(email)) return channel.ack(msg);
 
         // Set a temporary flag in Redis to prevent duplicate processing
-        await redisClient.set(email, "processing", "EX", 10);
+        await redisClient.set(email, "processing", {EX: 10});
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -59,6 +60,12 @@ async function insertBatch() {
     try {
         await User.insertMany(batch, { ordered: false });
         console.log(`Inserted ${batch.length} users`);
+
+        // Clean up Redis keys for processed emails
+        const redisClient = getRedisClient();
+        for (const user of batch) {
+            await redisClient.del(user.email);
+        }
     } catch (error) {
         console.error("Batch insert error:", error);
     }
@@ -69,5 +76,5 @@ async function insertBatch() {
 export const authConsumer = async(): Promise<void> => {
     const channel = await connectRabbitMQ();
     await processSignups(channel);
-    setInterval(insertBatch, 1000); // Process any remaining batch users every 1 sec
+    setInterval(insertBatch, 10000); // Process any remaining batch users every 10 sec
 };

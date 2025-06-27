@@ -10,7 +10,8 @@ import { createProxyMiddleware, Options } from 'http-proxy-middleware';
 import * as net from "node:net";
 import {authenticateToken} from "./middleware/authMiddleware";
 
-dotenv.config();
+const env = process.env.NODE_ENV;
+dotenv.config({ path: `.env.${env}` });
 
 // Create proxy for WebSocket/socket.io traffic
 const chatServerTarget = process.env.VIDEO_SERVER_URL;
