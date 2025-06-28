@@ -8,13 +8,11 @@ import connectDB from './config/db';
 import { setupSocketIO } from './socket';
 import videoRoutes from './routes/videoRoutes';
 
-dotenv.config();
+const env = process.env.NODE_ENV;
+dotenv.config({ path: `.env.${env}` });
 
 const app = express();
 const server = http.createServer(app);
-
-const API_GATEWAY_URL = process.env.API_GATEWAY_URL;
-const FRONTEND_URL = process.env.FRONTEND_URL;
 
 const io = new Server(server, {
     cors: {
@@ -50,7 +48,6 @@ const PORT = process.env.PORT;
 
 server.listen(PORT, () => {
     console.log(`Video Service running on http://localhost:${PORT}`);
-    console.log(`CORS configured for: ${API_GATEWAY_URL}, ${FRONTEND_URL}`);
     console.log(`Socket.IO path: /socket.io/`);
 });
 

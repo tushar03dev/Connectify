@@ -1,5 +1,9 @@
 import {DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client} from "@aws-sdk/client-s3";
 import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
+import dotenv from "dotenv";
+
+const env = process.env.NODE_ENV;
+dotenv.config({ path: `.env.${env}` });
 
 const s3Client = new S3Client({
     region: process.env.AWS_REGION as string,

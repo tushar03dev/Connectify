@@ -1,4 +1,4 @@
-import mongoose, {Document, Schema} from "mongoose";
+import mongoose, {Document} from "mongoose";
 
 export interface IRoom extends Document {
     name: string;

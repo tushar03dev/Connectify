@@ -2,9 +2,10 @@ import { Server, Socket } from "socket.io";
 import jwt from "jsonwebtoken";
 import { Room } from "./models/roomModel";
 import { User } from "./models/userModel";
-import { Video } from "./models/videoModel";
-import { getObjectURL } from "./utils/s3Utils";
 import mongoose from "mongoose";
+import dotenv from "dotenv";
+const env = process.env.NODE_ENV;
+dotenv.config({ path: `.env.${env}` });
 
 interface AuthenticatedSocket extends Socket {
     email?: string;

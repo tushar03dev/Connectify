@@ -28,7 +28,7 @@ COPY --from=builder /app/package*.json ./
 RUN npm install
 
 # Copy .env
-COPY .env.production .env
+COPY .env.production .env.production
 
 # App port
 EXPOSE 5001

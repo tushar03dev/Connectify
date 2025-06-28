@@ -5,7 +5,8 @@ import connectDB from "./config/db";
 import roomRoutes from "./routes/roomRoutes";
 import multer from "multer";
 
-dotenv.config();
+const env = process.env.NODE_ENV;
+dotenv.config({ path: `.env.${env}` });
 
 const app = express();
 app.use(express.json());

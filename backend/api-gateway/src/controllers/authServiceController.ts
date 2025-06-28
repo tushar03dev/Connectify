@@ -2,7 +2,8 @@ import {Request, Response} from "express";
 import axios from "axios";
 import dotenv from "dotenv";
 
-dotenv.config();
+const env = process.env.NODE_ENV;
+dotenv.config({ path: `.env.${env}` });
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL as string;
 
 export async function signInRequestToAuthService(req: Request, res: Response) {

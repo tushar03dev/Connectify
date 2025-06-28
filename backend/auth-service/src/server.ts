@@ -8,7 +8,8 @@ import otpRoutes from "./routes/otpRoutes";
 import {authConsumer} from "./consumers/authConsumer";
 import {connectRedis} from "./config/redis";
 
-dotenv.config();
+const env = process.env.NODE_ENV;
+dotenv.config({ path: `.env.${env}` });
 
 const app = express();
 
@@ -22,7 +23,6 @@ connectDB().then(async ()=> {
     await connectRedis().then( async() => {
         const authRoutes = (await import('./routes/authRoutes')).default;
         app.use('/auth', authRoutes);
-        console.log('Redis connected');
         }
     );
 

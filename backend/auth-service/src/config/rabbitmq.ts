@@ -1,8 +1,10 @@
 import amqp from "amqplib";
 import dotenv from "dotenv";
 
-dotenv.config();
+const env = process.env.NODE_ENV;
+dotenv.config({ path: `.env.${env}` });
 const RABBITMQ_URL = process.env.RABBITMQ_URL as string;
+console.log("RABBITMQ_URL used in auth-service:", RABBITMQ_URL);
 
 let connection: amqp.Connection | null = null;
 let channel: amqp.Channel | null = null;
