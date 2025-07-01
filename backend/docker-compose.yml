@@ -1,10 +1,11 @@
 services:
+  # Backend Services
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
     networks:
-      - backend
+      - app-network
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -12,10 +13,10 @@ services:
       - "5672:5672"
       - "15672:15672"
     networks:
-      - backend
+      - app-network
 
   api-gateway:
-    build: ./api-gateway
+    build: ./backend/api-gateway
     ports:
       - "5000:5000"
     depends_on:
@@ -23,42 +24,31 @@ services:
       - room-service
       - video-chat-service
     networks:
-      - backend
+      - app-network
 
   auth-service:
-    build: ./auth-service
+    build: ./backend/auth-service
     ports:
       - "5001:5001"
     depends_on:
       - redis
       - rabbitmq
     networks:
-      - backend
+      - app-network
 
   room-service:
-    build: ./room-service
+    build: ./backend/room-service
     ports:
       - "5002:5002"
     networks:
-      - backend
+      - app-network
 
   video-chat-service:
-    build: ./video-chat-service
+    build: ./backend/video-chat-service
     ports:
       - "5003:5003"
     networks:
-      - backend
-
-  nginx:
-    image: nginx:latest
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-    ports:
-      - "80:80"
-    depends_on:
-      - api-gateway
-    networks:
-      - backend
+      - app-network
 
 networks:
-  backend:
+  app-network:
