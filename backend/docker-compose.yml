@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   redis:
     image: redis:7-alpine
@@ -15,37 +17,45 @@ services:
       - app-network
 
   api-gateway:
-    image: connectify-backend/api-gateway
+    image: tushar03dev/connectify-backend:api-gateway
     ports:
       - "5000:5000"
     depends_on:
       - auth-service
       - room-service
       - video-chat-service
+    env_file:
+      - .env
     networks:
       - app-network
 
   auth-service:
-    image: connectify-backend/auth-service
+    image: tushar03dev/connectify-backend:auth-service
     ports:
       - "5001:5001"
     depends_on:
       - redis
       - rabbitmq
+    env_file:
+      - .env
     networks:
       - app-network
 
   room-service:
-    image: connectify-backend/room-service
+    image: tushar03dev/connectify-backend:room-service
     ports:
       - "5002:5002"
+    env_file:
+      - .env
     networks:
       - app-network
 
   video-chat-service:
-    image: connectify-backend/video-chat-service
+    image: tushar03dev/connectify-backend:video-chat-service
     ports:
       - "5003:5003"
+    env_file:
+      - .env
     networks:
       - app-network
 
