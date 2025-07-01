@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import express from 'express';
+import express, {Request, Response, NextFunction} from 'express';
 import cors from 'cors';
 import http from 'http';
 import { Server } from 'socket.io';
@@ -16,7 +16,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: "*",
+        origin: [`${process.env.API_GATEWAY_URL}`, `${process.env.FRONTEND_URL}`],
         methods: ['GET', 'POST'],
         credentials: true,
     },
@@ -30,7 +30,7 @@ setupSocketIO(io);
 connectDB();
 
 app.use(cors({
-    origin: "*",
+    origin:  [`${process.env.API_GATEWAY_URL}`, `${process.env.FRONTEND_URL}`],
     credentials: true,
 }));
 
@@ -39,7 +39,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use('/', videoRoutes);
 
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     console.error('Video service error:', err);
     res.status(500).json({ message: 'Internal server error' });
 });
