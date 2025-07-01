@@ -72,17 +72,23 @@ const PORT = process.env.PORT;
 const server = http.createServer(app);
 
 // Start listening
-server.listen(PORT, () => {
-    console.log(`API Gateway running on http://localhost:${PORT}`);
-});
+if(PORT){
 
-// Handle WebSocket upgrade requests (important for Socket.IO)
-server.on('upgrade', (req, socket: Duplex, head) => {
-    console.log('Upgrading WebSocket:', { url: req.url, headers: req.headers });
-    if (socket instanceof net.Socket) {
-        socketProxy.upgrade?.(req, socket, head);
-    } else {
-        console.error('Invalid socket type for upgrade');
-        socket.destroy();
-    }
-});
+   // to read requests for EC2
+    server.listen(parseInt(PORT),'0.0.0.0', () => {
+        console.log(`API Gateway running on http://localhost:${PORT}`);
+    });
+
+    // Handle WebSocket upgrade requests (important for Socket.IO)
+    server.on('upgrade', (req, socket: Duplex, head) => {
+        console.log('Upgrading WebSocket:', { url: req.url, headers: req.headers });
+        if (socket instanceof net.Socket) {
+            socketProxy.upgrade?.(req, socket, head);
+        } else {
+            console.error('Invalid socket type for upgrade');
+            socket.destroy();
+        }
+    });
+} else{
+    console.error("PORT not defined");
+}

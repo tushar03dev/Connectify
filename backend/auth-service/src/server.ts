@@ -1,5 +1,5 @@
 import express from 'express';
-import {Response} from 'express';
+import {Request, Response, NextFunction} from 'express';
 import dotenv from 'dotenv';
 import connectDB from './config/db';
 import bodyParser from 'body-parser';
@@ -20,7 +20,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // MongoDB Connection
 connectDB().then(async ()=> {
     await authConsumer();
-    await connectRedis().then( async() => {
+    await connectRedis()
+        .then( async() => {
         const authRoutes = (await import('./routes/authRoutes')).default;
         app.use('/auth', authRoutes);
         }
@@ -32,7 +33,7 @@ connectDB().then(async ()=> {
 app.use('/otp',otpRoutes);
 
 //Error-handling middleware
-app.use((err: any, res: Response) => {
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     console.error(err.stack);
     res.status(500).json({ message: 'Something went wrong!' });
 });

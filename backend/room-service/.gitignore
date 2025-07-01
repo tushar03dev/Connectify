@@ -1,4 +1,18 @@
-node_modules
+# Node modules
+node_modules/
 
-.env.development
-.env.production
+# Environment variables
+.env*
+
+# package-lock.json
+package-lock.json
+
+# Logs
+*.log
+
+# TypeScript output (if applicable)
+dist/
+build/
+
+# Other sensitive files or configuration
+*.local
