@@ -25,7 +25,7 @@ services:
       - room-service
       - video-chat-service
     env_file:
-      - .env
+      - .env.api-gateway
     networks:
       - app-network
 
@@ -37,7 +37,7 @@ services:
       - redis
       - rabbitmq
     env_file:
-      - .env
+      - .env.auth-service
     networks:
       - app-network
 
@@ -46,7 +46,7 @@ services:
     ports:
       - "5002:5002"
     env_file:
-      - .env
+      - .env.room-service
     networks:
       - app-network
 
@@ -55,7 +55,7 @@ services:
     ports:
       - "5003:5003"
     env_file:
-      - .env
+      - .env.video-chat-service
     networks:
       - app-network
 
