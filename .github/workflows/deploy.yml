@@ -1,0 +1,45 @@
+name: Build & Deploy Microservices to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build & Push Docker Images
+        run: |
+          docker build -t tushar03dev/connectify-backend:api-gateway ./backend/api-gateway
+          docker build -t tushar03dev/connectify-backend:auth-service ./backend/auth-service
+          docker build -t tushar03dev/connectify-backend:room-service ./backend/room-service
+          docker build -t tushar03dev/connectify-backend:video-chat-service ./backend/video-chat-service
+          
+          docker push tushar03dev/connectify-backend:api-gateway
+          docker push tushar03dev/connectify-backend:auth-service
+          docker push tushar03dev/connectify-backend:room-service
+          docker push tushar03dev/connectify-backend:video-chat-service
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        run: |
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            cd ${{ secrets.DEPLOY_DIR }}
+            docker compose pull
+            docker compose down
+            docker compose up -d
+          EOF

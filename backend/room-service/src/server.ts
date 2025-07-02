@@ -16,8 +16,8 @@ connectDB();
 
 // Middleware
 app.use(cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"]
+    origin: process.env.API_GATEWAY_URL,
+    credentials: true,
 }));
 
 // Middleware to handle form-data
