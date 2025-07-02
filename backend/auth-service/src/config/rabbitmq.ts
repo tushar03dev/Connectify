@@ -59,7 +59,4 @@ export async function publishToQueue(queue: string, message: object): Promise<vo
     }
 }
 
-// Initialize RabbitMQ connection on module load
-setupRabbitMQ().catch((err) => console.error('RabbitMQ Setup Failed For Auth Service:', err));
-
 export { connection, channel };
