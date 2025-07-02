@@ -1,27 +1,22 @@
-import { connect, Connection, Channel } from 'amqplib';
+import amqp from 'amqplib';
 import dotenv from 'dotenv';
 
 const env = process.env.NODE_ENV;
 dotenv.config({ path: `.env.${env}` });
+
 const RABBITMQ_URL = process.env.RABBITMQ_URL as string;
 console.log('RABBITMQ_URL used in auth-service:', RABBITMQ_URL);
 
-let connection: Connection | null = null;
-let channel: Channel | null = null;
+let connection: amqp.Connection | null = null;
+let channel: amqp.Channel | null = null;
 
-async function setupRabbitMQ(): Promise<Channel> {
+async function setupRabbitMQ(): Promise<amqp.Channel> {
     if (!connection) {
         let attempts = 10;
         while (attempts > 0) {
             try {
-                connection = await connect(RABBITMQ_URL);
-                if (!connection) {
-                    throw new Error('Failed to establish RabbitMQ connection');
-                }
+                connection = await amqp.connect(RABBITMQ_URL);
                 channel = await connection.createChannel();
-                if (!channel) {
-                    throw new Error('Failed to create RabbitMQ channel');
-                }
                 console.log('RabbitMQ Connected & Channel Created for Auth Service');
                 return channel;
             } catch (err) {
@@ -35,9 +30,6 @@ async function setupRabbitMQ(): Promise<Channel> {
 
     if (!channel) {
         channel = await connection.createChannel();
-        if (!channel) {
-            throw new Error('Failed to create RabbitMQ channel');
-        }
     }
 
     return channel;
