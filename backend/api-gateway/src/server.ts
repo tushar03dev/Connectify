@@ -12,6 +12,7 @@ import {authenticateToken} from "./middleware/authMiddleware";
 
 const env = process.env.NODE_ENV;
 dotenv.config({ path: `.env.${env}` });
+console.log(`.env.${env}`);
 
 // Create proxy for WebSocket/socket.io traffic
 const chatServerTarget = process.env.VIDEO_SERVER_URL;
