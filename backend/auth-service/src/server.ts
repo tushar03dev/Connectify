@@ -32,7 +32,6 @@ connectDB().then(async ()=> {
 
 });
 
-
 app.use('/otp',otpRoutes);
 
 //Error-handling middleware

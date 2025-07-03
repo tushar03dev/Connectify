@@ -57,3 +57,6 @@ export async function publishToQueue(queue: string, message: object): Promise<vo
         console.error("RabbitMQ Publish Error for Auth Service:", error);
     }
 }
+
+// Ensure setup on startup
+setupRabbitMQ().catch((err) => console.error(" RabbitMQ Setup Failed For Auth Service:", err));
