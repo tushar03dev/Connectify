@@ -10,13 +10,13 @@ export const sendOTP = async (email: string) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Create a JWT containing the OTP and set its expiry
-    const token = jwt.sign({ otp }, process.env.JWT_SECRET as string, { expiresIn: '1h' });
+    const token = jwt.sign({ otp }, process.env.JWT_SECRET as string, { expiresIn: '5m' });
 
     // Send OTP via email
     await transporter.sendMail({
         from: process.env.EMAIL_USER,
         to: email,
-        subject: 'Your Hush verification OTP Code',
+        subject: 'Your Connectify verification OTP Code',
         text: `Your OTP code is ${otp}. It will expire in 5 minutes.`,
     });
 
