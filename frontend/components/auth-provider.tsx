@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Temporarily store user data
         tempUser = { name, email};
 
-        localStorage.setItem("otpToken", JSON.stringify(response.data.otpToken))
+        localStorage.setItem("otpToken", response.data.otpToken)
         return true
       } else {
         console.error('Signup failed. Please try again.');
@@ -129,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUser(null)
     localStorage.removeItem("connectify-user")
+    localStorage.removeItem("token")
   }
 
   return <AuthContext.Provider value={{ user, login, signup, logout, isLoading, verifyOtp}}>{children}</AuthContext.Provider>
