@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import {User} from '../models/userModel';
 import dotenv from 'dotenv';
-import {sendOTP, verifyOTP} from "./otpController";
+import {passwordResetMail, sendOTP, verifyOTP} from "./otpController";
 import {publishToQueue} from "../config/rabbitmq";
 import {getRedisClient} from '../config/redis';
 
@@ -102,5 +102,23 @@ export const signIn = async (req: Request, res: Response, next: NextFunction) =>
     }
 };
 
+export const passwordReset = async (req: Request, res: Response, next: NextFunction) => {
+   try{
+
+    const { email } = req.body;
+
+    const user = await User.find({email : email});
+    if (!user) {
+        res.status(400).json({msg :'User does not exist.'});
+    }
+
+    const token = await passwordResetMail(email);
+
+    res.status(201).json({success:true, token, msg: 'Otp verification mail sent.'});
+
+   } catch (err) {
+       next(err);
+   }
+}
 
 
