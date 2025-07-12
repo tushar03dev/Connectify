@@ -102,5 +102,23 @@ export const signIn = async (req: Request, res: Response, next: NextFunction) =>
     }
 };
 
+export const passwordReset = async (req: Request, res: Response, next: NextFunction) => {
+   try{
+
+    const { email } = req.body;
+
+    const user = await User.find({email : email});
+    if (!user) {
+        res.status(400).json({msg :'User does not exist.'});
+    }
+
+    await passwordResetMail(email);
+
+    res.status(201).send('Otp verification mail sent.');
+
+   } catch (err) {
+       next(err);
+   }
+}
 
 
