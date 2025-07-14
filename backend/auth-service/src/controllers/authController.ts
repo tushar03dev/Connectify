@@ -121,4 +121,27 @@ export const passwordReset = async (req: Request, res: Response, next: NextFunct
    }
 }
 
+export const changePassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { email, password, otp, otpToken } = req.body;
+        if(!email || !password || !otp || !otpToken)  {
+            res.status(400).send('All fields are required.');
+        }
+        const user = await User.find({email : email});
+        if (!user) {
+            res.status(400).json({msg :'User does not exist.'});
+        }
 
+        const hashedPassword = bcrypt.hash(password, 10);
+        if (!hashedPassword) {
+            res.status(400).send('Invalid password');
+        }
+
+        await User.updateOne({ email: email }, { password: hashedPassword });
+
+        res.status(200).json({msg: 'Password updated'});
+
+    } catch (err) {
+        next(err);
+    }
+}
