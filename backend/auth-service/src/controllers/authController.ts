@@ -139,7 +139,7 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
 
         await User.updateOne({ email: email }, { password: hashedPassword });
 
-        res.status(200).json({msg: 'Password updated'});
+        res.status(200).json({success: true, msg: 'Password updated'});
 
     } catch (err) {
         next(err);
