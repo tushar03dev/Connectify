@@ -20,7 +20,7 @@ export default function LoginPage() {
   const [isForgotPassword, setIsForgotPassword] = useState(false)
   const [isOtpSent, setIsOtpSent] = useState(false)
   const [error, setError] = useState("")
-  const { login, requestOtp } = useAuth()
+  const { login, requestOtp, verifyOtpAndReset } = useAuth()
   const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -46,7 +46,6 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
     setError("")
-    setEmail(email)
 
     try {
       const success = await requestOtp(email)
@@ -69,8 +68,13 @@ export default function LoginPage() {
     setError("")
 
     try {
-
-      const success = await verifyOtpAndReset(email, otp, newPassword)
+      const otpToken = localStorage.getItem("otpToken")
+      console.log(otpToken)
+      if (!otpToken) {
+        console.error("Token not found")
+        return
+      }
+      const success = await verifyOtpAndReset(email, newPassword, otp, otpToken)
       if (success) {
         setError("Password reset successfully")
         setIsForgotPassword(false)

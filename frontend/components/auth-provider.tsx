@@ -23,7 +23,7 @@ type AuthContextType = {
   isLoading: boolean
   verifyOtp: (otpToken: string, otp: string) => Promise<boolean>
   requestOtp: (email: string) => Promise<boolean>
-  verifyOtpAndReset: (email: string, otpToken: string, password: string) => Promise<boolean>
+  verifyOtpAndReset: (email: string, password: string, otp: string, otpToken: string) => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -131,22 +131,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const requestOtp = async (email: string) => {
-    const response = await axios.post(`${API_BASE_URL}/auth/password-reset`, {email});
-    if (response.data) {
-      localStorage.setItem('OtpToken', response.data.otpToken);
-      return true
-    } else {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/auth/password-reset`, {email});
+      if (response.data.otpToken) {
+        localStorage.setItem('otpToken', response.data.otpToken);
+        return true
+      } else {
+        return false
+      }
+    } catch (error) {
+      console.error("Otp Request Failed", error)
       return false
     }
   }
 
-  const verifyOtpAndReset = async (email: string,password: string,otp:string,otpToken:string) => {
-    const response = await axios.post(`${API_BASE_URL}/auth/change-password`, {email,password,otp,otpToken});
-    if (response.data) {
-      return true
-    } else {
-      return false
-    }
+  const verifyOtpAndReset = async (email: string, password: string, otp:string, otpToken:string) => {
+   try {
+     const response = await axios.post(`${API_BASE_URL}/auth/change-password`, {email, password, otp, otpToken});
+     if (response.data) {
+       return true
+     } else {
+       return false
+     }
+   } catch (error) {
+     console.error("Password Reset Request Failed:", error)
+     return false
+   }
   }
 
   const logout = () => {

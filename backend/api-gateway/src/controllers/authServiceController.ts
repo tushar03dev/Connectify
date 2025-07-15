@@ -48,3 +48,32 @@ export async function otpVerificationRequestToAuthService(req: Request, res: Res
         console.error("[API Gateway] Failed to reach Auth Service for otp verification:", error);
     }
 }
+
+export async function passwordResetRequestToAuthService(req: Request, res: Response) {
+    try{
+        const { email } = req.body;
+        const response = await axios.post(`${AUTH_SERVICE_URL}/auth/password-reset`,{email})
+        if (response.data.success) {
+            res.status(200).json({otpToken: response.data.otpToken, message: response.data.msg});
+        } else {
+            res.status(500).json({success: false, error: "Failed to send message."});
+        }
+    } catch (error) {
+        console.error("[API Gateway] Failed to reach Auth Service for passwordReset Request:", error);
+    }
+}
+
+export async function changePasswordRequestToAuthService(req: Request, res: Response) {
+    try {
+        const {email, password, otp, otpToken} = req.body;
+
+        const response = await axios.post(`${AUTH_SERVICE_URL}/auth/change-password`, {email, password, otp, otpToken})
+        if (response.data.success) {
+            res.status(200).json({token: response.data.token, message: response.data.msg});
+        } else {
+            res.status(500).json({success: false, error: "Failed to change password."});
+        }
+    } catch (error) {
+        console.error("[API Gateway] Failed to reach Auth Service for change password request:", error);
+    }
+}

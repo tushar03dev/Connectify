@@ -112,9 +112,9 @@ export const passwordReset = async (req: Request, res: Response, next: NextFunct
         res.status(400).json({msg :'User does not exist.'});
     }
 
-    const token = await passwordResetMail(email);
+    const otpToken = await passwordResetMail(email);
 
-    res.status(201).json({success:true, token, msg: 'Otp verification mail sent.'});
+    res.status(201).json({success:true, otpToken, msg: 'Otp verification mail sent.'});
 
    } catch (err) {
        next(err);
@@ -132,14 +132,14 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
             res.status(400).json({msg :'User does not exist.'});
         }
 
-        const hashedPassword = bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, 10);
         if (!hashedPassword) {
             res.status(400).send('Invalid password');
         }
 
         await User.updateOne({ email: email }, { password: hashedPassword });
 
-        res.status(200).json({msg: 'Password updated'});
+        res.status(200).json({success: true, msg: 'Password updated'});
 
     } catch (err) {
         next(err);

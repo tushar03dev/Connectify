@@ -1,6 +1,7 @@
 import express from "express";
 import {
-    otpVerificationRequestToAuthService,
+    changePasswordRequestToAuthService,
+    otpVerificationRequestToAuthService, passwordResetRequestToAuthService,
     signInRequestToAuthService,
     signUpRequestToAuthService
 } from "../controllers/authServiceController";
@@ -12,5 +13,9 @@ router.post("/sign-in",signInRequestToAuthService);
 router.post("/sign-up",signUpRequestToAuthService);
 
 router.post("/verify",otpVerificationRequestToAuthService);
+
+router.post("/password-reset",passwordResetRequestToAuthService);
+
+router.post("/change-password",changePasswordRequestToAuthService);
 
 export default router;
