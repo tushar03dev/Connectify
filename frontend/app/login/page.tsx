@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -15,9 +14,13 @@ import { ThemeToggle } from "@/components/theme-toggle"
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [otp, setOtp] = useState("")
+  const [newPassword, setNewPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isForgotPassword, setIsForgotPassword] = useState(false)
+  const [isOtpSent, setIsOtpSent] = useState(false)
   const [error, setError] = useState("")
-  const { login } = useAuth()
+  const { login, requestOtp } = useAuth()
   const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -39,66 +42,211 @@ export default function LoginPage() {
     }
   }
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError("")
+    setEmail(email)
+
+    try {
+      const success = await requestOtp(email)
+      if (success) {
+        setIsOtpSent(true)
+        setError("OTP sent successfully")
+      } else {
+        setError("Failed to send OTP. Please try again.")
+      }
+    } catch (err) {
+      setError("An error occurred while sending OTP. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleVerifyOtpAndReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError("")
+
+    try {
+
+      const success = await verifyOtpAndReset(email, otp, newPassword)
+      if (success) {
+        setError("Password reset successfully")
+        setIsForgotPassword(false)
+        setIsOtpSent(false)
+        setEmail("")
+        setOtp("")
+        setNewPassword("")
+      } else {
+        setError("Invalid OTP or reset failed")
+      }
+    } catch (err) {
+      setError("An error occurred while verifying OTP. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-4">
-      <div className="absolute right-4 top-4">
-        <ThemeToggle />
+      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-4">
+        <div className="absolute right-4 top-4">
+          <ThemeToggle />
+        </div>
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-2xl">
+              {isForgotPassword ? (isOtpSent ? "Reset Password" : "Forgot Password") : "Login"}
+            </CardTitle>
+            <CardDescription>
+              {isForgotPassword
+                  ? isOtpSent
+                      ? "Enter the OTP and your new password"
+                      : "Enter your email to receive an OTP"
+                  : "Enter your email and password to access your account"}
+            </CardDescription>
+          </CardHeader>
+          {isForgotPassword ? (
+              isOtpSent ? (
+                  <form onSubmit={handleVerifyOtpAndReset}>
+                    <CardContent className="space-y-4">
+                      {error && <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">{error}</div>}
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                            id="email"
+                            type="email"
+                            placeholder="name@example.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            disabled
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="otp">OTP</Label>
+                        <Input
+                            id="otp"
+                            type="text"
+                            placeholder="Enter OTP"
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                            required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-password">New Password</Label>
+                        <Input
+                            id="new-password"
+                            type="password"
+                            placeholder="Enter new password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            required
+                        />
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex flex-col space-y-4">
+                      <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading ? "Resetting Password..." : "Reset Password"}
+                      </Button>
+                      <div className="text-center text-sm">
+                        <button
+                            type="button"
+                            onClick={() => {
+                              setIsForgotPassword(false)
+                              setIsOtpSent(false)
+                              setOtp("")
+                              setNewPassword("")
+                            }}
+                            className="text-primary underline underline-offset-4 hover:text-primary/90"
+                        >
+                          Back to Login
+                        </button>
+                      </div>
+                    </CardFooter>
+                  </form>
+              ) : (
+                  <form onSubmit={handleForgotPassword}>
+                    <CardContent className="space-y-4">
+                      {error && <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">{error}</div>}
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                            id="email"
+                            type="email"
+                            placeholder="name@example.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex flex-col space-y-4">
+                      <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading ? "Sending OTP..." : "Send OTP"}
+                      </Button>
+                      <div className="text-center text-sm">
+                        <button
+                            type="button"
+                            onClick={() => setIsForgotPassword(false)}
+                            className="text-primary underline underline-offset-4 hover:text-primary/90"
+                        >
+                          Back to Login
+                        </button>
+                      </div>
+                    </CardFooter>
+                  </form>
+              )
+          ) : (
+              <form onSubmit={handleLogin}>
+                <CardContent className="space-y-4">
+                  {error && <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">{error}</div>}
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                        id="email"
+                        type="email"
+                        placeholder="name@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Password</Label>
+                      <button
+                          type="button"
+                          onClick={() => setIsForgotPassword(true)}
+                          className="text-xs text-muted-foreground underline underline-offset-4 hover:text-primary"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                    <Input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                    />
+                  </div>
+                </CardContent>
+                <CardFooter className="flex flex-col space-y-4">
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Logging in..." : "Login"}
+                  </Button>
+                  <div className="text-center text-sm">
+                    Don't have an account?{" "}
+                    <Link href="/signup" className="text-primary underline underline-offset-4 hover:text-primary/90">
+                      Sign up
+                    </Link>
+                  </div>
+                </CardFooter>
+              </form>
+          )}
+        </Card>
       </div>
-      {/*<Link href="/" className="mb-4 flex items-center space-x-2">*/}
-      {/*  <span className="text-2xl font-bold">Connectify</span>*/}
-      {/*</Link>*/}
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>Enter your email and password to access your account</CardDescription>
-        </CardHeader>
-        <form onSubmit={handleLogin}>
-          <CardContent className="space-y-4">
-            {error && <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">{error}</div>}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link
-                  href="/forgot-password"
-                  className="text-xs text-muted-foreground underline underline-offset-4 hover:text-primary"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Logging in..." : "Login"}
-            </Button>
-            <div className="text-center text-sm">
-              Don&apos;t have an account?{" "}
-              <Link href="/signup" className="text-primary underline underline-offset-4 hover:text-primary/90">
-                Sign up
-              </Link>
-            </div>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
   )
 }
-

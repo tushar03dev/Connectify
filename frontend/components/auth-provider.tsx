@@ -22,6 +22,8 @@ type AuthContextType = {
   logout: () => void
   isLoading: boolean
   verifyOtp: (otpToken: string, otp: string) => Promise<boolean>
+  requestOtp: (email: string) => Promise<boolean>
+  verifyOtpAndReset: (email: string, otpToken: string, password: string) => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -31,6 +33,8 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   isLoading: true,
   verifyOtp: async () => false,
+  requestOtp: async() => false,
+  verifyOtpAndReset : async() => false,
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -126,13 +130,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const requestOtp = async (email: string) => {
+    const response = await axios.post(`${API_BASE_URL}/auth/password-reset`, {email});
+    if (response.data) {
+      localStorage.setItem('OtpToken', response.data.otpToken);
+      return true
+    } else {
+      return false
+    }
+  }
+
+  const verifyOtpAndReset = async (email: string,password: string,otp:string,otpToken:string) => {
+    const response = await axios.post(`${API_BASE_URL}/auth/change-password`, {email,password,otp,otpToken});
+    if (response.data) {
+      return true
+    } else {
+      return false
+    }
+  }
+
   const logout = () => {
     setUser(null)
     localStorage.removeItem("connectify-user")
     localStorage.removeItem("token")
   }
 
-  return <AuthContext.Provider value={{ user, login, signup, logout, isLoading, verifyOtp}}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, login, signup, logout, isLoading, verifyOtp, requestOtp, verifyOtpAndReset}}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => useContext(AuthContext)
