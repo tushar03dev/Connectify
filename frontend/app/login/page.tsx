@@ -46,7 +46,6 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
     setError("")
-    setEmail(email)
 
     try {
       const success = await requestOtp(email)
@@ -70,6 +69,7 @@ export default function LoginPage() {
 
     try {
       const otpToken = localStorage.getItem("otpToken")
+      console.log(otpToken)
       if (!otpToken) {
         console.error("Token not found")
         return

@@ -133,8 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const requestOtp = async (email: string) => {
     try {
       const response = await axios.post(`${API_BASE_URL}/auth/password-reset`, {email});
-      if (response.data) {
-        localStorage.setItem('OtpToken', response.data.otpToken);
+      if (response.data.otpToken) {
+        localStorage.setItem('otpToken', response.data.otpToken);
         return true
       } else {
         return false
