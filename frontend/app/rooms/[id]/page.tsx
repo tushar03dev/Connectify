@@ -9,7 +9,21 @@ import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/components/auth-provider"
-import { Pause, Play, Send, Share2, Video, Volume2, VolumeX, X, Maximize, Users, Copy, Crown } from "lucide-react"
+import {
+  Pause,
+  Play,
+  Send,
+  Share2,
+  Video,
+  Volume2,
+  VolumeX,
+  X,
+  Maximize,
+  Users,
+  Copy,
+  Crown,
+  Settings,
+} from "lucide-react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useVideo } from "@/components/video-provider"
 import { Label } from "@/components/ui/label"
@@ -39,6 +53,13 @@ interface Message {
   avatar?: string
 }
 
+interface VideoItem {
+  _id: string
+  originalName: string
+  uploadedBy?: string
+  uploadedByName?: string
+}
+
 export default function RoomPage() {
   const { id } = useParams()
   const { user } = useAuth()
@@ -57,9 +78,24 @@ export default function RoomPage() {
   const [users, setUsers] = useState<User[]>([])
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showParticipants, setShowParticipants] = useState(false)
+  const [showControls, setShowControls] = useState(true)
+  const [playbackSpeed, setPlaybackSpeed] = useState(1)
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const videoContainerRef = useRef<HTMLDivElement>(null)
+  const controlsTimeoutRef = useRef<NodeJS.Timeout>()
+
+  const speedOptions = [
+    { value: 0.25, label: "0.25x" },
+    { value: 0.5, label: "0.5x" },
+    { value: 0.75, label: "0.75x" },
+    { value: 1, label: "Normal" },
+    { value: 1.25, label: "1.25x" },
+    { value: 1.5, label: "1.5x" },
+    { value: 2, label: "2x" },
+    { value: 2.5, label: "2.5x" },
+  ]
 
   const handleVideoUpload = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -168,13 +204,17 @@ export default function RoomPage() {
         console.error("Invalid vid-state payload:", data)
         return
       }
-      const { isPlaying, videoUrl, currentTime } = data
+      const { isPlaying, videoUrl, currentTime, playbackSpeed: remoteSpeed } = data
       if (videoRef.current) {
         if (videoRef.current.src !== videoUrl) {
           videoRef.current.src = videoUrl
           videoRef.current.load()
         }
         videoRef.current.currentTime = currentTime
+        if (remoteSpeed && remoteSpeed !== playbackSpeed) {
+          setPlaybackSpeed(remoteSpeed)
+          videoRef.current.playbackRate = remoteSpeed
+        }
         if (isPlaying) {
           videoRef.current.play().catch((error) => {
             console.error("Play error:", error)
@@ -196,6 +236,13 @@ export default function RoomPage() {
         }
         videoRef.current.currentTime = newTime
         setCurrentTime(newTime)
+      }
+    })
+
+    socketRef.current?.on("playback-speed-changed", ({ speed }) => {
+      setPlaybackSpeed(speed)
+      if (videoRef.current) {
+        videoRef.current.playbackRate = speed
       }
     })
 
@@ -239,7 +286,7 @@ export default function RoomPage() {
     return () => {
       socketRef.current?.disconnect()
     }
-  }, [id, selectedVideoId])
+  }, [id, selectedVideoId, playbackSpeed])
 
   useEffect(() => {
     if (id) getVideos(id as string)
@@ -260,11 +307,12 @@ export default function RoomPage() {
           isPlaying: true,
           videoUrl: selectedVideoPath,
           currentTime: videoRef.current?.currentTime || 0,
+          playbackSpeed,
         })
       }, 10000)
     }
     return () => clearInterval(syncInterval)
-  }, [isPlaying, selectedVideoPath, id])
+  }, [isPlaying, selectedVideoPath, id, playbackSpeed])
 
   const handlePlayClick = async (videoId: string) => {
     if (!videoRef.current || !videoId) {
@@ -319,6 +367,7 @@ export default function RoomPage() {
         isPlaying: true,
         videoUrl,
         currentTime: 0,
+        playbackSpeed,
         serverTimestamp: Date.now(),
       })
     } catch (error: unknown) {
@@ -344,6 +393,7 @@ export default function RoomPage() {
         isPlaying: !isPlaying,
         videoUrl: selectedVideoPath,
         currentTime,
+        playbackSpeed,
       })
     } else {
       console.error("Cannot toggle play/pause: No video selected")
@@ -383,6 +433,18 @@ export default function RoomPage() {
       newTime: seekTime,
       videoUrl: selectedVideoPath,
     })
+  }
+
+  const handleSpeedChange = (speed: number) => {
+    setPlaybackSpeed(speed)
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed
+    }
+    socketRef.current?.emit("playback-speed-changed", {
+      roomId: id,
+      speed,
+    })
+    setShowSpeedMenu(false)
   }
 
   const formatTime = (seconds: number) => {
@@ -455,6 +517,18 @@ export default function RoomPage() {
     }
   }
 
+  const handleMouseMove = () => {
+    setShowControls(true)
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current)
+    }
+    controlsTimeoutRef.current = setTimeout(() => {
+      if (isPlaying) {
+        setShowControls(false)
+      }
+    }, 3000)
+  }
+
   const activeUsers = users.filter((u) => u.isActive)
   const inactiveUsers = users.filter((u) => !u.isActive)
 
@@ -473,24 +547,34 @@ export default function RoomPage() {
 
   return (
       <AuthCheck redirectTo="/login">
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-          <div className="container mx-auto grid min-h-screen grid-rows-[auto_1fr] gap-6 p-6">
+        <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+          {/* Elegant grid background */}
+          <div className="fixed inset-0 elegant-grid opacity-40"></div>
+
+          {/* Subtle floating elements */}
+          <div className="fixed inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute top-20 left-20 w-32 h-32 bg-blue-200/20 dark:bg-blue-400/10 rounded-full blur-xl animate-gentle-float"></div>
+            <div className="absolute top-40 right-32 w-24 h-24 bg-indigo-200/20 dark:bg-indigo-400/10 rounded-full blur-xl animate-gentle-float delay-200"></div>
+            <div className="absolute bottom-32 left-32 w-28 h-28 bg-slate-200/20 dark:bg-slate-400/10 rounded-full blur-xl animate-gentle-float delay-400"></div>
+          </div>
+
+          <div className="container mx-auto grid min-h-screen grid-rows-[auto_1fr] gap-6 p-6 relative z-10">
             {/* Header */}
-            <header className="glass rounded-2xl p-6">
+            <header className="elegant-card rounded-2xl p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
                     <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div>
-                    <h1 className="text-2xl font-bold text-white">Room</h1>
+                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Room</h1>
                   </div>
-                  <div className="flex items-center space-x-2 glass rounded-lg px-3 py-1">
-                    <span className="text-sm text-gray-300">Code:</span>
-                    <code className="text-lg font-mono text-purple-300">{id}</code>
+                  <div className="flex items-center space-x-2 elegant-card rounded-lg px-3 py-1">
+                    <span className="text-sm text-slate-600 dark:text-slate-300">Code:</span>
+                    <code className="text-lg font-mono text-blue-600 dark:text-blue-400">{id}</code>
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={handleCopyRoomCode}
-                        className="h-6 w-6 p-0 text-purple-300 hover:text-purple-100"
+                        className="h-6 w-6 p-0 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
                     >
                       <Copy className="h-3 w-3" />
                     </Button>
@@ -504,7 +588,7 @@ export default function RoomPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => setShowParticipants(!showParticipants)}
-                            className="text-white hover:bg-white/10"
+                            className="text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                         >
                           <Users className="mr-2 h-4 w-4" />
                           {users.length}
@@ -518,7 +602,7 @@ export default function RoomPage() {
                   <Button
                       variant="outline"
                       onClick={handleShareRoom}
-                      className="border-purple-500/50 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20"
+                      className="elegant-button bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0"
                   >
                     <Share2 className="mr-2 h-4 w-4" />
                     Share Room
@@ -533,6 +617,8 @@ export default function RoomPage() {
                 <div
                     ref={videoContainerRef}
                     className="group relative aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl"
+                    onMouseMove={handleMouseMove}
+                    onMouseLeave={() => isPlaying && setShowControls(false)}
                 >
                   <video
                       ref={videoRef}
@@ -541,11 +627,13 @@ export default function RoomPage() {
                       onTimeUpdate={() => {
                         if (videoRef.current) {
                           setCurrentTime(videoRef.current.currentTime)
+                          setDuration(videoRef.current.duration || 100)
                           socketRef.current?.emit("vid-state", {
                             roomId: id,
                             isPlaying: !videoRef.current.paused,
                             videoId: selectedVideoId,
                             currentTime: videoRef.current.currentTime,
+                            playbackSpeed,
                             serverTimestamp: Date.now(),
                           })
                         }
@@ -566,81 +654,134 @@ export default function RoomPage() {
                         setIsPlaying(false)
                       }}
                   />
-                  <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={toggleFullscreen}
-                      className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 text-white hover:bg-black/70"
-                  >
-                    <Maximize className="h-4 w-4" />
-                  </Button>
-                </div>
 
-                {/* Video Controls */}
-                <div className="glass rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handlePlayPause}
-                        aria-label={isPlaying ? "Pause" : "Play"}
-                        className="text-white hover:bg-white/10"
-                    >
-                      {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
-                    </Button>
-                    <span className="text-sm text-gray-300 font-mono">
-                    {formatTime(currentTime)} / {formatTime(duration)}
-                  </span>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={handleMuteToggle}
-                          aria-label={isMuted ? "Unmute" : "Mute"}
-                          className="text-white hover:bg-white/10"
-                      >
-                        {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-                      </Button>
-                      <div className="w-24">
-                        <Slider
-                            value={[volume]}
-                            min={0}
-                            max={100}
-                            step={1}
-                            onValueChange={handleVolumeChange}
-                            className="[&_[role=slider]]:bg-purple-500"
-                        />
+                  {/* YouTube-style Video Controls */}
+                  <div
+                      className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 transition-opacity duration-300 ${
+                          showControls ? "opacity-100" : "opacity-0"
+                      }`}
+                  >
+                    {/* Progress Bar */}
+                    <div className="mb-4">
+                      <Slider
+                          value={[currentTime]}
+                          min={0}
+                          max={duration || 100}
+                          step={0.1}
+                          onValueChange={handleSeek}
+                          className="w-full [&_[role=slider]]:bg-red-500 [&_[role=slider]]:border-red-500 [&_.bg-primary]:bg-red-500"
+                      />
+                    </div>
+
+                    {/* Control Buttons */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        {/* Play/Pause */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handlePlayPause}
+                            className="text-white hover:bg-white/20"
+                        >
+                          {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
+                        </Button>
+
+                        {/* Volume */}
+                        <div className="flex items-center space-x-2">
+                          <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={handleMuteToggle}
+                              className="text-white hover:bg-white/20"
+                          >
+                            {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                          </Button>
+                          <div className="w-20">
+                            <Slider
+                                value={[volume]}
+                                min={0}
+                                max={100}
+                                step={1}
+                                onValueChange={handleVolumeChange}
+                                className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-white [&_.bg-primary]:bg-white"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Time Display */}
+                        <span className="text-sm text-white font-mono">
+                        {formatTime(currentTime)} / {formatTime(duration)}
+                      </span>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        {/* Speed Control */}
+                        <div className="relative">
+                          <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+                              className="text-white hover:bg-white/20 text-xs"
+                          >
+                            <Settings className="h-4 w-4 mr-1" />
+                            {playbackSpeed}x
+                          </Button>
+                          {showSpeedMenu && (
+                              <div className="absolute bottom-full right-0 mb-2 bg-black/90 rounded-lg p-2 min-w-[100px]">
+                                <div className="text-xs text-white mb-2 px-2">Speed</div>
+                                {speedOptions.map((option) => (
+                                    <button
+                                        key={option.value}
+                                        onClick={() => handleSpeedChange(option.value)}
+                                        className={`block w-full text-left px-2 py-1 text-sm rounded hover:bg-white/20 ${
+                                            playbackSpeed === option.value ? "text-red-500" : "text-white"
+                                        }`}
+                                    >
+                                      {option.label}
+                                    </button>
+                                ))}
+                              </div>
+                          )}
+                        </div>
+
+                        {/* Fullscreen */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={toggleFullscreen}
+                            className="text-white hover:bg-white/20"
+                        >
+                          <Maximize className="h-5 w-5" />
+                        </Button>
                       </div>
                     </div>
                   </div>
-                  <Slider
-                      value={[currentTime]}
-                      min={0}
-                      max={duration || 100}
-                      step={0.1}
-                      onValueChange={handleSeek}
-                      className="[&_[role=slider]]:bg-purple-500"
-                  />
                 </div>
 
                 {/* Video List */}
                 <div className="space-y-3">
-                  {videos.map((video) => (
-                      <Card key={video.originalName} className="glass border-purple-500/20 relative group">
+                  {videos.map((video: VideoItem) => (
+                      <Card
+                          key={video.originalName}
+                          className="elegant-card border-blue-200/50 dark:border-blue-800/50 relative group"
+                      >
                         <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between pr-8">
                             <div className="flex items-center space-x-4">
-                              <div className="rounded-full bg-purple-500/20 p-2">
-                                <Video className="h-5 w-5 text-purple-400" />
+                              <div className="rounded-full bg-blue-500/20 p-2">
+                                <Video className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                               </div>
                               <div>
-                                <h3 className="font-medium text-white">{video.originalName}</h3>
+                                <h3 className="font-medium text-slate-900 dark:text-white">{video.originalName}</h3>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">
+                                  Shared by {video.uploadedByName || "Unknown User"}
+                                </p>
                               </div>
                             </div>
                             <Button
                                 size="sm"
                                 onClick={() => handlePlayClick(video._id)}
-                                className="bg-purple-600 hover:bg-purple-700 text-white"
+                                className="elegant-button bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
                             >
                               Play
                             </Button>
@@ -651,21 +792,23 @@ export default function RoomPage() {
                             className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center w-6 h-6 rounded-full bg-red-500/20 hover:bg-red-500/40"
                             aria-label={`Delete ${video.originalName}`}
                         >
-                          <X className="w-4 h-4 text-red-400" strokeWidth={2.5} />
+                          <X className="w-4 h-4 text-red-500" strokeWidth={2.5} />
                         </button>
                       </Card>
                   ))}
 
                   {/* Upload Card */}
-                  <Card className="glass border-purple-500/20">
+                  <Card className="elegant-card border-blue-200/50 dark:border-blue-800/50">
                     <CardHeader>
-                      <CardTitle className="text-white">Upload a new video</CardTitle>
-                      <CardDescription className="text-gray-400">Select a file from your computer</CardDescription>
+                      <CardTitle className="text-slate-900 dark:text-white">Upload a new video</CardTitle>
+                      <CardDescription className="text-slate-600 dark:text-slate-400">
+                        Select a file from your computer
+                      </CardDescription>
                     </CardHeader>
                     <form onSubmit={handleVideoUpload}>
                       <CardContent>
                         <div className="space-y-2">
-                          <Label htmlFor="videoFile" className="text-gray-300">
+                          <Label htmlFor="videoFile" className="text-slate-700 dark:text-slate-300">
                             Select Video File
                           </Label>
                           <Input
@@ -675,7 +818,7 @@ export default function RoomPage() {
                               onChange={(e) => {
                                 if (e.target.files?.[0]) setVideoFile(e.target.files[0])
                               }}
-                              className="bg-white/5 border-purple-500/30 text-white"
+                              className="bg-white/50 dark:bg-slate-800/50 border-blue-200 dark:border-blue-800 text-slate-900 dark:text-white"
                           />
                         </div>
                       </CardContent>
@@ -683,7 +826,7 @@ export default function RoomPage() {
                         <Button
                             type="submit"
                             disabled={isLoading || isUploading}
-                            className="bg-purple-600 hover:bg-purple-700 text-white"
+                            className="elegant-button bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
                         >
                           {isLoading || isUploading ? "Uploading..." : "Upload Video"}
                         </Button>
@@ -694,15 +837,15 @@ export default function RoomPage() {
               </div>
 
               {/* Chat Section */}
-              <div className="flex flex-col glass rounded-2xl overflow-hidden">
+              <div className="flex flex-col elegant-card rounded-2xl overflow-hidden">
                 {/* Chat Header */}
-                <div className="border-b border-purple-500/20 p-4">
+                <div className="border-b border-blue-200/50 dark:border-blue-800/50 p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="font-semibold text-white flex items-center">
+                    <h2 className="font-semibold text-slate-900 dark:text-white flex items-center">
                       <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
                       Live Chat
                     </h2>
-                    <Badge variant="secondary" className="bg-purple-500/20 text-purple-300">
+                    <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 dark:text-blue-300">
                       {messages.length} messages
                     </Badge>
                   </div>
@@ -710,13 +853,13 @@ export default function RoomPage() {
                   {/* Active Users */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-400">Active ({activeUsers.length})</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Active ({activeUsers.length})</span>
                       {showParticipants && (
                           <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => setShowParticipants(false)}
-                              className="text-gray-400 hover:text-white"
+                              className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                           >
                             <X className="h-3 w-3" />
                           </Button>
@@ -730,12 +873,12 @@ export default function RoomPage() {
                                 <div className="relative">
                                   <Avatar className="h-6 w-6 border border-green-500/50">
                                     <AvatarImage src={user.avatar || "/placeholder.svg"} />
-                                    <AvatarFallback className="text-xs bg-purple-600 text-white">
+                                    <AvatarFallback className="text-xs bg-blue-600 text-white">
                                       {getInitials(user.name)}
                                     </AvatarFallback>
                                   </Avatar>
                                   {user.isOwner && <Crown className="absolute -top-1 -right-1 h-3 w-3 text-yellow-500" />}
-                                  <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-slate-900"></div>
+                                  <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-white dark:border-slate-900"></div>
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -751,7 +894,7 @@ export default function RoomPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => setShowParticipants(true)}
-                              className="h-6 w-6 p-0 text-xs text-gray-400 hover:text-white"
+                              className="h-6 w-6 p-0 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                           >
                             +{activeUsers.length - 5}
                           </Button>
@@ -760,9 +903,11 @@ export default function RoomPage() {
 
                     {showParticipants && inactiveUsers.length > 0 && (
                         <>
-                          <Separator className="bg-purple-500/20" />
+                          <Separator className="bg-blue-200/50 dark:bg-blue-800/50" />
                           <div className="space-y-2">
-                            <span className="text-sm text-gray-400">Inactive ({inactiveUsers.length})</span>
+                        <span className="text-sm text-slate-600 dark:text-slate-400">
+                          Inactive ({inactiveUsers.length})
+                        </span>
                             <div className="flex flex-wrap gap-1">
                               {inactiveUsers.map((user) => (
                                   <TooltipProvider key={user.id}>
@@ -775,7 +920,7 @@ export default function RoomPage() {
                                               {getInitials(user.name)}
                                             </AvatarFallback>
                                           </Avatar>
-                                          <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-gray-500 rounded-full border border-slate-900"></div>
+                                          <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-gray-500 rounded-full border border-white dark:border-slate-900"></div>
                                         </div>
                                       </TooltipTrigger>
                                       <TooltipContent>
@@ -807,15 +952,15 @@ export default function RoomPage() {
                               >
                                 <Avatar className="h-8 w-8 flex-shrink-0">
                                   <AvatarImage src={msg.avatar || "/placeholder.svg"} />
-                                  <AvatarFallback className="text-xs bg-purple-600 text-white">
+                                  <AvatarFallback className="text-xs bg-blue-600 text-white">
                                     {getInitials(msg.user)}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div
                                     className={`rounded-2xl px-4 py-2 ${
                                         isCurrentUser(msg.userId)
-                                            ? "bg-purple-600 text-white rounded-br-md"
-                                            : "bg-white/10 text-white rounded-bl-md"
+                                            ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-br-md"
+                                            : "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-bl-md"
                                     }`}
                                 >
                                   <div className="flex items-center space-x-2 mb-1">
@@ -835,10 +980,10 @@ export default function RoomPage() {
                             </div>
                         ))
                     ) : (
-                        <div className="flex h-32 items-center justify-center text-gray-400">
+                        <div className="flex h-32 items-center justify-center text-slate-600 dark:text-slate-400">
                           <div className="text-center">
-                            <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                              <Send className="h-6 w-6 text-purple-400" />
+                            <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                              <Send className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                             </div>
                             <p>No messages yet</p>
                             <p className="text-xs">Start the conversation!</p>
@@ -849,13 +994,13 @@ export default function RoomPage() {
                 </ScrollArea>
 
                 {/* Message Input */}
-                <div className="border-t border-purple-500/20 p-4">
+                <div className="border-t border-blue-200/50 dark:border-blue-800/50 p-4">
                   <form onSubmit={handleSendMessage} className="flex space-x-2">
                     <Textarea
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
                         placeholder="Type your message..."
-                        className="min-h-[40px] flex-1 resize-none bg-white/5 border-purple-500/30 text-white placeholder:text-gray-400 focus:border-purple-500"
+                        className="min-h-[40px] flex-1 resize-none bg-white/50 dark:bg-slate-800/50 border-blue-200 dark:border-blue-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:border-blue-500"
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault()
@@ -867,7 +1012,7 @@ export default function RoomPage() {
                         type="submit"
                         size="icon"
                         disabled={!message.trim()}
-                        className="bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50"
+                        className="elegant-button bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white disabled:opacity-50"
                     >
                       <Send className="h-4 w-4" />
                     </Button>
