@@ -23,10 +23,11 @@ import {
   Copy,
   Crown,
   Settings,
+  Upload,
+  Check,
 } from "lucide-react"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { useVideo } from "@/components/video-provider"
-import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -81,6 +82,9 @@ export default function RoomPage() {
   const [showControls, setShowControls] = useState(true)
   const [playbackSpeed, setPlaybackSpeed] = useState(1)
   const [showSpeedMenu, setShowSpeedMenu] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [isAtBottom, setIsAtBottom] = useState(true)
+  const [copied, setCopied] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const videoContainerRef = useRef<HTMLDivElement>(null)
@@ -100,22 +104,21 @@ export default function RoomPage() {
   const handleVideoUpload = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!videoFile || !id) {
-      alert("Please select a video file.")
       return
     }
     setIsUploading(true)
     try {
       const success = await uploadVideo(videoFile, id as string)
       if (success) {
-        alert("Video uploaded successfully!")
         await getVideos(id as string)
         socketRef.current?.emit("videoUploaded", { roomId: id })
-      } else {
-        alert("Video upload failed.")
+        setVideoFile(null)
+        // Reset file input
+        const fileInput = document.getElementById("videoFile") as HTMLInputElement
+        if (fileInput) fileInput.value = ""
       }
     } catch (error) {
       console.error("Error uploading video:", error)
-      alert("Error uploading video. Please try again.")
     } finally {
       setIsUploading(false)
     }
@@ -127,7 +130,6 @@ export default function RoomPage() {
     const token = localStorage.getItem("token")
     if (!token) {
       console.error("No token found in localStorage")
-      alert("Authentication error. Please log in again.")
       window.location.href = "/login"
       return
     }
@@ -171,7 +173,6 @@ export default function RoomPage() {
       console.log("Join room response:", response)
       if (!response.success) {
         console.error("Failed to join room:", response.error)
-        alert("Failed to join room: " + response.error)
       }
     })
 
@@ -179,7 +180,6 @@ export default function RoomPage() {
       console.log("Join room response:", response)
       if (!response.success) {
         console.error("Failed to join room:", response.error)
-        alert("Failed to join room: " + response.error)
       }
     })
 
@@ -267,7 +267,14 @@ export default function RoomPage() {
           console.warn("Duplicate message filtered out:", parsedMessage.id)
           return prevMessages
         }
-        return [...prevMessages, parsedMessage]
+        const newMessages = [...prevMessages, parsedMessage]
+
+        // Handle unread count
+        if (!isAtBottom && !isCurrentUser(parsedMessage.userId)) {
+          setUnreadCount((prev) => prev + 1)
+        }
+
+        return newMessages
       })
     })
 
@@ -280,23 +287,43 @@ export default function RoomPage() {
 
     socketRef.current.on("error", (error) => {
       console.error("Socket.IO error:", error)
-      alert(`Socket error: ${error}`)
     })
 
     return () => {
       socketRef.current?.disconnect()
     }
-  }, [id, selectedVideoId, playbackSpeed])
+  }, [id, selectedVideoId, playbackSpeed, isAtBottom])
 
   useEffect(() => {
     if (id) getVideos(id as string)
   }, [id])
 
+  // Handle auto-scroll and unread count
   useEffect(() => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+      const container = chatContainerRef.current
+
+      const handleScroll = () => {
+        const { scrollTop, scrollHeight, clientHeight } = container
+        const isNearBottom = scrollTop + clientHeight >= scrollHeight - 50
+        setIsAtBottom(isNearBottom)
+
+        if (isNearBottom) {
+          setUnreadCount(0)
+        }
+      }
+
+      container.addEventListener("scroll", handleScroll)
+
+      // Auto-scroll if at bottom
+      if (isAtBottom) {
+        container.scrollTop = container.scrollHeight
+        setUnreadCount(0)
+      }
+
+      return () => container.removeEventListener("scroll", handleScroll)
     }
-  }, [messages])
+  }, [messages, isAtBottom])
 
   useEffect(() => {
     let syncInterval: NodeJS.Timeout | undefined
@@ -317,14 +344,12 @@ export default function RoomPage() {
   const handlePlayClick = async (videoId: string) => {
     if (!videoRef.current || !videoId) {
       console.error("Invalid video selection:", { videoId, videoRef: !!videoRef.current })
-      alert("Cannot play video: Invalid video or player not ready")
       return
     }
 
     try {
       const token = localStorage.getItem("token")
       if (!token) {
-        alert("Session expired. Please log in again.")
         window.location.href = "/login"
         return
       }
@@ -341,7 +366,6 @@ export default function RoomPage() {
       if (!response.ok) {
         const errorText = await response.text()
         console.error("Failed to fetch signed URL", { status: response.status, errorText })
-        alert(`Failed to load video: ${errorText}`)
         return
       }
 
@@ -349,7 +373,6 @@ export default function RoomPage() {
       const videoUrl = data.url
       if (!videoUrl) {
         console.error("No URL returned from server", { response: data })
-        alert("Failed to load video: No URL provided")
         return
       }
 
@@ -373,7 +396,6 @@ export default function RoomPage() {
     } catch (error: unknown) {
       const err = error as Error
       console.error("Error in video selection:", err)
-      alert(`Error playing video: ${err.message}`)
     }
   }
 
@@ -487,12 +509,16 @@ export default function RoomPage() {
 
   const handleShareRoom = () => {
     navigator.clipboard.writeText(window.location.href)
-    alert("Room link copied to clipboard!")
   }
 
-  const handleCopyRoomCode = () => {
-    navigator.clipboard.writeText(id as string)
-    alert("Room code copied to clipboard!")
+  const handleCopyRoomCode = async () => {
+    try {
+      await navigator.clipboard.writeText(id as string)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error("Failed to copy:", err)
+    }
   }
 
   const handleDeleteClick = async (videoId: string) => {
@@ -527,6 +553,14 @@ export default function RoomPage() {
         setShowControls(false)
       }
     }, 3000)
+  }
+
+  const scrollToBottom = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+      setUnreadCount(0)
+      setIsAtBottom(true)
+    }
   }
 
   const activeUsers = users.filter((u) => u.isActive)
@@ -576,8 +610,11 @@ export default function RoomPage() {
                         onClick={handleCopyRoomCode}
                         className="h-6 w-6 p-0 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
                     >
-                      <Copy className="h-3 w-3" />
+                      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                     </Button>
+                    {copied && (
+                        <span className="text-xs text-green-600 dark:text-green-400 animate-fade-in">Copied!</span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
@@ -611,12 +648,12 @@ export default function RoomPage() {
               </div>
             </header>
 
-            <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+            <div className="grid gap-6 lg:grid-cols-[2fr_1fr] h-[calc(100vh-200px)]">
               {/* Video Section */}
-              <div className="flex flex-col space-y-4">
+              <div className="flex flex-col space-y-4 h-full">
                 <div
                     ref={videoContainerRef}
-                    className="group relative aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl"
+                    className="group relative aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl flex-shrink-0"
                     onMouseMove={handleMouseMove}
                     onMouseLeave={() => isPlaying && setShowControls(false)}
                 >
@@ -650,7 +687,6 @@ export default function RoomPage() {
                           networkState: videoElement.networkState,
                           readyState: videoElement.readyState,
                         })
-                        alert(`Failed to load video: ${error?.message || "Unknown error"} (Code: ${error?.code})`)
                         setIsPlaying(false)
                       }}
                   />
@@ -759,95 +795,141 @@ export default function RoomPage() {
                 </div>
 
                 {/* Video List */}
-                <div className="space-y-3">
-                  {videos.map((video: VideoItem) => (
-                      <Card
-                          key={video.originalName}
-                          className="elegant-card border-blue-200/50 dark:border-blue-800/50 relative group"
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between pr-8">
-                            <div className="flex items-center space-x-4">
-                              <div className="rounded-full bg-blue-500/20 p-2">
-                                <Video className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <div className="flex-1 overflow-y-auto space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Videos</h3>
+                    <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 dark:text-blue-300">
+                      {videos.length} videos
+                    </Badge>
+                  </div>
+
+                  {videos.length === 0 ? (
+                      <div className="elegant-card rounded-xl p-8 text-center">
+                        <div className="w-16 h-16 bg-slate-200/50 dark:bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Video className="h-8 w-8 text-slate-400" />
+                        </div>
+                        <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No videos available</h4>
+                        <p className="text-slate-600 dark:text-slate-400">Upload a video to get started</p>
+                      </div>
+                  ) : (
+                      videos.map((video: VideoItem) => (
+                          <Card
+                              key={video.originalName}
+                              className="elegant-card border-blue-200/50 dark:border-blue-800/50 relative group"
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between pr-8">
+                                <div className="flex items-center space-x-4">
+                                  <div className="rounded-full bg-blue-500/20 p-2">
+                                    <Video className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                  </div>
+                                  <div>
+                                    <h3 className="font-medium text-slate-900 dark:text-white">{video.originalName}</h3>
+                                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                                      Shared by {video.uploadedByName || "Unknown User"}
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    onClick={() => handlePlayClick(video._id)}
+                                    className="elegant-button bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
+                                >
+                                  Play
+                                </Button>
                               </div>
-                              <div>
-                                <h3 className="font-medium text-slate-900 dark:text-white">{video.originalName}</h3>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">
-                                  Shared by {video.uploadedByName || "Unknown User"}
-                                </p>
-                              </div>
-                            </div>
-                            <Button
-                                size="sm"
-                                onClick={() => handlePlayClick(video._id)}
-                                className="elegant-button bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
+                            </CardContent>
+                            <button
+                                onClick={() => handleDeleteClick(video._id)}
+                                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center w-6 h-6 rounded-full bg-red-500/20 hover:bg-red-500/40"
+                                aria-label={`Delete ${video.originalName}`}
                             >
-                              Play
-                            </Button>
-                          </div>
-                        </CardContent>
-                        <button
-                            onClick={() => handleDeleteClick(video._id)}
-                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center w-6 h-6 rounded-full bg-red-500/20 hover:bg-red-500/40"
-                            aria-label={`Delete ${video.originalName}`}
-                        >
-                          <X className="w-4 h-4 text-red-500" strokeWidth={2.5} />
-                        </button>
-                      </Card>
-                  ))}
+                              <X className="w-4 h-4 text-red-500" strokeWidth={2.5} />
+                            </button>
+                          </Card>
+                      ))
+                  )}
 
                   {/* Upload Card */}
-                  <Card className="elegant-card border-blue-200/50 dark:border-blue-800/50">
-                    <CardHeader>
-                      <CardTitle className="text-slate-900 dark:text-white">Upload a new video</CardTitle>
-                      <CardDescription className="text-slate-600 dark:text-slate-400">
-                        Select a file from your computer
-                      </CardDescription>
-                    </CardHeader>
+                  <Card className="elegant-card border-blue-200/50 dark:border-blue-800/50 border-dashed">
                     <form onSubmit={handleVideoUpload}>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <Label htmlFor="videoFile" className="text-slate-700 dark:text-slate-300">
-                            Select Video File
-                          </Label>
-                          <Input
-                              type="file"
-                              id="videoFile"
-                              accept="video/mp4,video/webm"
-                              onChange={(e) => {
-                                if (e.target.files?.[0]) setVideoFile(e.target.files[0])
-                              }}
-                              className="bg-white/50 dark:bg-slate-800/50 border-blue-200 dark:border-blue-800 text-slate-900 dark:text-white"
-                          />
+                      <CardContent className="p-6">
+                        <div className="text-center">
+                          <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Upload className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">Upload Video</h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                            Share a video with everyone in the room
+                          </p>
+
+                          <div className="space-y-4">
+                            <Input
+                                type="file"
+                                id="videoFile"
+                                accept="video/mp4,video/webm,video/avi,video/mov"
+                                onChange={(e) => {
+                                  if (e.target.files?.[0]) setVideoFile(e.target.files[0])
+                                }}
+                                className="bg-white/50 dark:bg-slate-800/50 border-blue-200 dark:border-blue-800 text-slate-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                            />
+
+                            {videoFile && (
+                                <div className="text-sm text-slate-600 dark:text-slate-400 bg-blue-50/50 dark:bg-blue-900/20 rounded-lg p-3">
+                                  <strong>Selected:</strong> {videoFile.name}
+                                  <br />
+                                  <strong>Size:</strong> {(videoFile.size / (1024 * 1024)).toFixed(2)} MB
+                                </div>
+                            )}
+
+                            <Button
+                                type="submit"
+                                disabled={!videoFile || isLoading || isUploading}
+                                className="w-full elegant-button bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white disabled:opacity-50"
+                            >
+                              {isLoading || isUploading ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    Uploading...
+                                  </>
+                              ) : (
+                                  <>
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Upload Video
+                                  </>
+                              )}
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
-                      <CardFooter>
-                        <Button
-                            type="submit"
-                            disabled={isLoading || isUploading}
-                            className="elegant-button bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
-                        >
-                          {isLoading || isUploading ? "Uploading..." : "Upload Video"}
-                        </Button>
-                      </CardFooter>
                     </form>
                   </Card>
                 </div>
               </div>
 
-              {/* Chat Section */}
-              <div className="flex flex-col elegant-card rounded-2xl overflow-hidden">
+              {/* Chat Section - Fixed height matching video section */}
+              <div className="flex flex-col elegant-card rounded-2xl overflow-hidden h-full">
                 {/* Chat Header */}
-                <div className="border-b border-blue-200/50 dark:border-blue-800/50 p-4">
+                <div className="border-b border-blue-200/50 dark:border-blue-800/50 p-4 flex-shrink-0">
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="font-semibold text-slate-900 dark:text-white flex items-center">
                       <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
                       Live Chat
                     </h2>
-                    <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 dark:text-blue-300">
-                      {messages.length} messages
-                    </Badge>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 dark:text-blue-300">
+                        {messages.length} messages
+                      </Badge>
+                      {unreadCount > 0 && (
+                          <Badge
+                              variant="destructive"
+                              className="bg-red-500 text-white cursor-pointer animate-pulse"
+                              onClick={scrollToBottom}
+                          >
+                            {unreadCount} new
+                          </Badge>
+                      )}
+                    </div>
                   </div>
 
                   {/* Active Users */}
@@ -937,64 +1019,68 @@ export default function RoomPage() {
                 </div>
 
                 {/* Messages */}
-                <ScrollArea className="flex-1 p-4" style={{ maxHeight: "calc(100vh - 400px)" }}>
-                  <div ref={chatContainerRef} className="space-y-4">
-                    {messages.length > 0 ? (
-                        messages.map((msg) => (
-                            <div
-                                key={msg.id}
-                                className={`flex ${isCurrentUser(msg.userId) ? "justify-end" : "justify-start"}`}
-                            >
+                <div className="flex-1 overflow-hidden">
+                  <ScrollArea className="h-full p-4">
+                    <div ref={chatContainerRef} className="space-y-4">
+                      {messages.length > 0 ? (
+                          messages.map((msg) => (
                               <div
-                                  className={`flex max-w-[80%] ${
-                                      isCurrentUser(msg.userId) ? "flex-row-reverse" : "flex-row"
-                                  } items-start space-x-2`}
+                                  key={msg.id}
+                                  className={`flex ${isCurrentUser(msg.userId) ? "justify-end" : "justify-start"}`}
                               >
-                                <Avatar className="h-8 w-8 flex-shrink-0">
-                                  <AvatarImage src={msg.avatar || "/placeholder.svg"} />
-                                  <AvatarFallback className="text-xs bg-blue-600 text-white">
-                                    {getInitials(msg.user)}
-                                  </AvatarFallback>
-                                </Avatar>
                                 <div
-                                    className={`rounded-2xl px-4 py-2 ${
-                                        isCurrentUser(msg.userId)
-                                            ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-br-md"
-                                            : "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-bl-md"
-                                    }`}
+                                    className={`flex max-w-[80%] ${
+                                        isCurrentUser(msg.userId) ? "flex-row-reverse" : "flex-row"
+                                    } items-start space-x-2`}
                                 >
-                                  <div className="flex items-center space-x-2 mb-1">
-                              <span className="text-xs font-medium opacity-80">
-                                {isCurrentUser(msg.userId) ? "You" : msg.user}
-                              </span>
-                                    <span className="text-xs opacity-60">
-                                {msg.timestamp.toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </span>
+                                  {!isCurrentUser(msg.userId) && (
+                                      <Avatar className="h-8 w-8 flex-shrink-0">
+                                        <AvatarImage src={msg.avatar || "/placeholder.svg"} />
+                                        <AvatarFallback className="text-xs bg-blue-600 text-white">
+                                          {getInitials(msg.user)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                  )}
+                                  <div
+                                      className={`rounded-2xl px-4 py-2 ${
+                                          isCurrentUser(msg.userId)
+                                              ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-br-md"
+                                              : "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-bl-md"
+                                      }`}
+                                  >
+                                    <div className="flex items-center space-x-2 mb-1">
+                                <span className="text-xs font-medium opacity-80">
+                                  {isCurrentUser(msg.userId) ? "You" : msg.user}
+                                </span>
+                                      <span className="text-xs opacity-60">
+                                  {msg.timestamp.toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                                    </div>
+                                    <p className="text-sm leading-relaxed">{msg.text}</p>
                                   </div>
-                                  <p className="text-sm leading-relaxed">{msg.text}</p>
                                 </div>
                               </div>
+                          ))
+                      ) : (
+                          <div className="flex h-32 items-center justify-center text-slate-600 dark:text-slate-400">
+                            <div className="text-center">
+                              <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <Send className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                              </div>
+                              <p>No messages yet</p>
+                              <p className="text-xs">Start the conversation!</p>
                             </div>
-                        ))
-                    ) : (
-                        <div className="flex h-32 items-center justify-center text-slate-600 dark:text-slate-400">
-                          <div className="text-center">
-                            <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                              <Send className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <p>No messages yet</p>
-                            <p className="text-xs">Start the conversation!</p>
                           </div>
-                        </div>
-                    )}
-                  </div>
-                </ScrollArea>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
 
                 {/* Message Input */}
-                <div className="border-t border-blue-200/50 dark:border-blue-800/50 p-4">
+                <div className="border-t border-blue-200/50 dark:border-blue-800/50 p-4 flex-shrink-0">
                   <form onSubmit={handleSendMessage} className="flex space-x-2">
                     <Textarea
                         value={message}
