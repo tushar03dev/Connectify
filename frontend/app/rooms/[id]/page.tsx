@@ -17,7 +17,6 @@ import {
   Video,
   Volume2,
   VolumeX,
-  X,
   Maximize,
   Users,
   Copy,
@@ -25,6 +24,8 @@ import {
   Settings,
   Upload,
   Check,
+  MessageSquare,
+  Minimize,
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { useVideo } from "@/components/video-provider"
@@ -66,7 +67,7 @@ export default function RoomPage() {
   const { user } = useAuth()
   const [isUploading, setIsUploading] = useState(false)
   const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null)
-  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null)
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>("")
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const { video, videos, uploadVideo, getVideos, isLoading, deleteVideo } = useVideo()
   const [isPlaying, setIsPlaying] = useState(false)
@@ -78,6 +79,8 @@ export default function RoomPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isTheaterMode, setIsTheaterMode] = useState(false)
+  const [showChatInFullscreen, setShowChatInFullscreen] = useState(true)
   const [showParticipants, setShowParticipants] = useState(false)
   const [showControls, setShowControls] = useState(true)
   const [playbackSpeed, setPlaybackSpeed] = useState(1)
@@ -113,7 +116,6 @@ export default function RoomPage() {
         await getVideos(id as string)
         socketRef.current?.emit("videoUploaded", { roomId: id })
         setVideoFile(null)
-        // Reset file input
         const fileInput = document.getElementById("videoFile") as HTMLInputElement
         if (fileInput) fileInput.value = ""
       }
@@ -127,6 +129,8 @@ export default function RoomPage() {
   const socketRef = useRef<Socket<DefaultEventsMap, DefaultEventsMap> | null>(null)
 
   useEffect(() => {
+    if (typeof window === "undefined") return
+
     const token = localStorage.getItem("token")
     if (!token) {
       console.error("No token found in localStorage")
@@ -268,12 +272,9 @@ export default function RoomPage() {
           return prevMessages
         }
         const newMessages = [...prevMessages, parsedMessage]
-
-        // Handle unread count
         if (!isAtBottom && !isCurrentUser(parsedMessage.userId)) {
           setUnreadCount((prev) => prev + 1)
         }
-
         return newMessages
       })
     })
@@ -298,34 +299,289 @@ export default function RoomPage() {
     if (id) getVideos(id as string)
   }, [id])
 
-  // Handle auto-scroll and unread count
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      const container = chatContainerRef.current
+  const toggleFullscreen = async () => {
+    console.log("=== FULLSCREEN DEBUG START ===")
 
-      const handleScroll = () => {
-        const { scrollTop, scrollHeight, clientHeight } = container
-        const isNearBottom = scrollTop + clientHeight >= scrollHeight - 50
-        setIsAtBottom(isNearBottom)
+    if (typeof window === "undefined") {
+      console.error("Window is undefined - not in browser environment")
+      return
+    }
 
-        if (isNearBottom) {
-          setUnreadCount(0)
+    if (!videoContainerRef.current) {
+      console.error("Video container ref is null")
+      return
+    }
+
+    // Ensure the element is focusable and visible
+    const element = videoContainerRef.current
+
+    // Make sure element is properly focused and interactable
+    element.focus()
+
+    // Add a small delay to ensure user gesture is properly registered
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    // Log browser capabilities
+    console.log("Browser fullscreen support:", {
+      requestFullscreen: !!element.requestFullscreen,
+      webkitRequestFullscreen: !!(element as any).webkitRequestFullscreen,
+      mozRequestFullScreen: !!(element as any).mozRequestFullScreen,
+      msRequestFullscreen: !!(element as any).msRequestFullscreen,
+      fullscreenEnabled: document.fullscreenEnabled,
+      webkitFullscreenEnabled: (document as any).webkitFullscreenEnabled,
+    })
+
+    // Check current fullscreen state across all browsers
+    const currentFullscreenElement =
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+
+    const isCurrentlyFullscreen = !!currentFullscreenElement
+    console.log("Current fullscreen state:", {
+      isCurrentlyFullscreen,
+      fullscreenElement: currentFullscreenElement,
+      reactState: isFullscreen,
+    })
+
+    try {
+      if (!isCurrentlyFullscreen) {
+        console.log("Attempting to ENTER fullscreen...")
+
+        // Set a flag to prevent immediate exit
+        let fullscreenPromise: Promise<void> | undefined
+
+        // Try each method in order of preference with better error handling
+        if (element.requestFullscreen) {
+          console.log("Using standard requestFullscreen")
+          fullscreenPromise = element
+              .requestFullscreen({
+                navigationUI: "hide",
+              })
+              .catch((error) => {
+                console.log("Standard requestFullscreen failed, trying without options")
+                return element.requestFullscreen()
+              })
+        } else if ((element as any).webkitRequestFullscreen) {
+          console.log("Using webkit requestFullscreen")
+          fullscreenPromise = (element as any).webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT)
+        } else if ((element as any).mozRequestFullScreen) {
+          console.log("Using moz requestFullScreen")
+          fullscreenPromise = (element as any).mozRequestFullScreen()
+        } else if ((element as any).msRequestFullscreen) {
+          console.log("Using ms requestFullscreen")
+          fullscreenPromise = (element as any).msRequestFullscreen()
+        } else {
+          throw new Error("No fullscreen API available")
+        }
+
+        if (fullscreenPromise) {
+          await fullscreenPromise
+          console.log("Fullscreen request completed successfully")
+
+          // Add a small delay to let the browser process the fullscreen change
+          await new Promise((resolve) => setTimeout(resolve, 100))
+
+          // Manually set state if browser event hasn't fired yet
+          if (!isFullscreen) {
+            console.log("Manually setting fullscreen state to true")
+            setIsFullscreen(true)
+          }
+        }
+      } else {
+        console.log("Attempting to EXIT fullscreen...")
+
+        let exitPromise: Promise<void> | undefined
+
+        if (document.exitFullscreen) {
+          console.log("Using standard exitFullscreen")
+          exitPromise = document.exitFullscreen()
+        } else if ((document as any).webkitExitFullscreen) {
+          console.log("Using webkit exitFullscreen")
+          exitPromise = (document as any).webkitExitFullscreen()
+        } else if ((document as any).mozCancelFullScreen) {
+          console.log("Using moz cancelFullScreen")
+          exitPromise = (document as any).mozCancelFullScreen()
+        } else if ((document as any).msExitFullscreen) {
+          console.log("Using ms exitFullscreen")
+          exitPromise = (document as any).msExitFullscreen()
+        } else {
+          throw new Error("No exit fullscreen API available")
+        }
+
+        if (exitPromise) {
+          await exitPromise
+          console.log("Exit fullscreen request completed successfully")
+        }
+      }
+    } catch (error) {
+      console.error("Fullscreen API error:", error)
+
+      // Check if it's a user interaction error
+      if (error instanceof Error) {
+        if (error.name === "NotAllowedError") {
+          console.error("Fullscreen blocked - user interaction required or permissions denied")
+          // Try to provide helpful feedback
+          const userAgent = navigator.userAgent.toLowerCase()
+          if (userAgent.includes("chrome")) {
+            alert(
+                "Chrome blocked fullscreen. Try clicking the fullscreen button again, or check if you have any extensions blocking it.",
+            )
+          } else if (userAgent.includes("firefox")) {
+            alert("Firefox blocked fullscreen. Make sure you're clicking directly on the button and try again.")
+          } else if (userAgent.includes("safari")) {
+            alert("Safari blocked fullscreen. Try double-clicking the video area instead.")
+          } else {
+            alert("Fullscreen was blocked. Please try clicking the fullscreen button again.")
+          }
+        } else if (error.name === "TypeError") {
+          console.error("Fullscreen API not supported")
+          alert("Fullscreen is not supported in your browser.")
+        } else if (error.name === "InvalidStateError") {
+          console.error("Invalid state for fullscreen")
+          // Reset state and try again
+          setIsFullscreen(false)
+          setTimeout(() => toggleFullscreen(), 100)
+          return
+        } else {
+          console.error("Unknown fullscreen error:", error.message)
         }
       }
 
-      container.addEventListener("scroll", handleScroll)
+      return
+    }
 
-      // Auto-scroll if at bottom
-      if (isAtBottom) {
-        container.scrollTop = container.scrollHeight
-        setUnreadCount(0)
+    console.log("=== FULLSCREEN DEBUG END ===")
+  }
+
+  // Add a separate function to handle double-click fullscreen
+  const handleDoubleClick = () => {
+    console.log("Double-click detected, attempting fullscreen")
+    toggleFullscreen()
+  }
+
+  // Add keyboard shortcut handler
+  const handleKeyPress = (e: KeyboardEvent) => {
+    if (e.key === "f" || e.key === "F") {
+      console.log("F key pressed, attempting fullscreen")
+      toggleFullscreen()
+    }
+    if (e.key === "Escape") {
+      console.log("Escape key pressed")
+      // Let browser handle escape naturally
+    }
+  }
+
+  // Handle fullscreen changes with cross-browser support
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    let fullscreenChangeTimeout: NodeJS.Timeout
+
+    const handleFullscreenChange = () => {
+      // Clear any existing timeout to debounce rapid changes
+      clearTimeout(fullscreenChangeTimeout)
+
+      fullscreenChangeTimeout = setTimeout(() => {
+        const isNowFullscreen = !!(
+            document.fullscreenElement ||
+            (document as any).webkitFullscreenElement ||
+            (document as any).mozFullScreenElement ||
+            (document as any).msFullscreenElement
+        )
+
+        console.log("Fullscreen state changed via event:", isNowFullscreen)
+
+        // Only update state if it's actually different
+        if (isNowFullscreen !== isFullscreen) {
+          setIsFullscreen(isNowFullscreen)
+
+          if (!isNowFullscreen) {
+            setIsTheaterMode(false)
+            setShowControls(true)
+          }
+        }
+      }, 50) // Small delay to handle rapid state changes
+    }
+
+    const handleFullscreenError = (event: Event) => {
+      console.error("Fullscreen error event:", event)
+      // Reset state on error
+      setIsFullscreen(false)
+      setIsTheaterMode(false)
+    }
+
+    // Add all possible fullscreen event listeners
+    const events = ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "MSFullscreenChange"]
+    const errorEvents = ["fullscreenerror", "webkitfullscreenerror", "mozfullscreenerror", "MSFullscreenError"]
+
+    events.forEach((event) => {
+      document.addEventListener(event, handleFullscreenChange)
+    })
+
+    errorEvents.forEach((event) => {
+      document.addEventListener(event, handleFullscreenError)
+    })
+
+    return () => {
+      clearTimeout(fullscreenChangeTimeout)
+      events.forEach((event) => {
+        document.removeEventListener(event, handleFullscreenChange)
+      })
+      errorEvents.forEach((event) => {
+        document.removeEventListener(event, handleFullscreenError)
+      })
+    }
+  }, [isFullscreen]) // Add isFullscreen as dependency
+
+  // Keyboard shortcuts for fullscreen
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only trigger if not typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return
       }
 
-      return () => container.removeEventListener("scroll", handleScroll)
+      if (e.key === "f" || e.key === "F") {
+        e.preventDefault()
+        console.log("F key pressed, attempting fullscreen")
+        toggleFullscreen()
+      }
     }
+
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [])
+
+  // Handle auto-scroll and unread count
+  useEffect(() => {
+    if (typeof window === "undefined" || !chatContainerRef.current) return
+
+    const container = chatContainerRef.current
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 50
+      setIsAtBottom(isNearBottom)
+      if (isNearBottom) {
+        setUnreadCount(0)
+      }
+    }
+
+    container.addEventListener("scroll", handleScroll)
+    if (isAtBottom) {
+      container.scrollTop = container.scrollHeight
+      setUnreadCount(0)
+    }
+
+    return () => container.removeEventListener("scroll", handleScroll)
   }, [messages, isAtBottom])
 
   useEffect(() => {
+    if (typeof window === "undefined") return
+
     let syncInterval: NodeJS.Timeout | undefined
     if (isPlaying && selectedVideoPath && videoRef.current) {
       syncInterval = setInterval(() => {
@@ -350,7 +606,9 @@ export default function RoomPage() {
     try {
       const token = localStorage.getItem("token")
       if (!token) {
-        window.location.href = "/login"
+        if (typeof window !== "undefined") {
+          window.location.href = "/login"
+        }
         return
       }
 
@@ -475,6 +733,14 @@ export default function RoomPage() {
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`
   }
 
+  const formatTime12Hour = (date: Date) => {
+    return date.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    })
+  }
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault()
     if (message.trim() && user && socketRef.current) {
@@ -508,10 +774,13 @@ export default function RoomPage() {
   }
 
   const handleShareRoom = () => {
-    navigator.clipboard.writeText(window.location.href)
+    if (typeof window !== "undefined") {
+      navigator.clipboard.writeText(window.location.href)
+    }
   }
 
   const handleCopyRoomCode = async () => {
+    if (typeof window === "undefined") return
     try {
       await navigator.clipboard.writeText(id as string)
       setCopied(true)
@@ -522,8 +791,8 @@ export default function RoomPage() {
   }
 
   const handleDeleteClick = async (videoId: string) => {
-    const confirmed = window.confirm("Are you sure you want to delete this video?")
-    if (confirmed) {
+    if (typeof window === "undefined") return
+    if (window.confirm("Are you sure you want to delete this video?")) {
       const success = await deleteVideo(videoId)
       if (success) {
         console.log("Successfully deleted")
@@ -533,13 +802,12 @@ export default function RoomPage() {
     }
   }
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      videoContainerRef.current?.requestFullscreen()
-      setIsFullscreen(true)
+  const toggleTheaterMode = () => {
+    if (!isFullscreen) {
+      toggleFullscreen()
+      setIsTheaterMode(true)
     } else {
-      document.exitFullscreen()
-      setIsFullscreen(false)
+      setIsTheaterMode(!isTheaterMode)
     }
   }
 
@@ -549,7 +817,7 @@ export default function RoomPage() {
       clearTimeout(controlsTimeoutRef.current)
     }
     controlsTimeoutRef.current = setTimeout(() => {
-      if (isPlaying) {
+      if (isPlaying && (isFullscreen || isTheaterMode)) {
         setShowControls(false)
       }
     }, 3000)
@@ -579,13 +847,341 @@ export default function RoomPage() {
     return userId === user?.id || userId === "current-user"
   }
 
+  const getVideoCountText = (count: number) => {
+    return count === 1 ? "1 video" : `${count} videos`
+  }
+
+  const testFullscreenCapabilities = () => {
+    console.log("=== TESTING FULLSCREEN CAPABILITIES ===")
+
+    if (!videoContainerRef.current) {
+      console.log("❌ Video container ref is null")
+      return
+    }
+
+    const element = videoContainerRef.current
+
+    console.log("Element details:", {
+      tagName: element.tagName,
+      id: element.id,
+      className: element.className,
+      clientWidth: element.clientWidth,
+      clientHeight: element.clientHeight,
+    })
+
+    console.log("Fullscreen API availability:", {
+      "element.requestFullscreen": typeof element.requestFullscreen,
+      "element.webkitRequestFullscreen": typeof (element as any).webkitRequestFullscreen,
+      "element.mozRequestFullScreen": typeof (element as any).mozRequestFullScreen,
+      "element.msRequestFullscreen": typeof (element as any).msRequestFullscreen,
+      "document.fullscreenEnabled": document.fullscreenEnabled,
+      "document.webkitFullscreenEnabled": (document as any).webkitFullscreenEnabled,
+    })
+
+    console.log("Current fullscreen state:", {
+      "document.fullscreenElement": document.fullscreenElement,
+      "document.webkitFullscreenElement": (document as any).webkitFullscreenElement,
+      "document.mozFullScreenElement": (document as any).mozFullScreenElement,
+      "document.msFullscreenElement": (document as any).msFullscreenElement,
+    })
+
+    console.log("User agent:", navigator.userAgent)
+    console.log("=== END TEST ===")
+  }
+
+  // Fullscreen layout
+  if (isFullscreen) {
+    return (
+        <AuthCheck redirectTo="/login">
+          <div className="fixed inset-0 bg-black z-50 flex">
+            <div
+                className={`relative ${isTheaterMode && showChatInFullscreen ? "flex-1" : "w-full"} flex flex-col`}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={() => isPlaying && setShowControls(false)}
+                ref={videoContainerRef}
+            >
+              <video
+                  ref={videoRef}
+                  className="w-full h-full object-contain"
+                  src={selectedVideoPath || undefined}
+                  onTimeUpdate={() => {
+                    if (videoRef.current) {
+                      setCurrentTime(videoRef.current.currentTime)
+                      setDuration(videoRef.current.duration || 100)
+                    }
+                  }}
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+              />
+
+              {/* Chat Toggle Button (Top-Right Corner) */}
+              {isTheaterMode && (
+                  <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        console.log("Toggling chat panel, current state:", showChatInFullscreen)
+                        setShowChatInFullscreen(!showChatInFullscreen)
+                      }}
+                      className="absolute top-4 right-4 text-white hover:bg-white/20 bg-black/50 rounded-full p-2 z-10"
+                  >
+                    <MessageSquare className="h-5 w-5" />
+                  </Button>
+              )}
+
+              {/* Fullscreen Controls (Bottom) */}
+              <div
+                  className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 transition-opacity duration-300 ${
+                      showControls ? "opacity-100" : "opacity-0"
+                  }`}
+              >
+                <div className="mb-4">
+                  <Slider
+                      value={[currentTime]}
+                      min={0}
+                      max={duration || 100}
+                      step={0.1}
+                      onValueChange={handleSeek}
+                      className="w-full [&_[role=slider]]:bg-red-500 [&_[role=slider]]:border-red-500 [&_.bg-primary]:bg-red-500"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handlePlayPause}
+                        className="text-white hover:bg-white/20"
+                    >
+                      {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
+                    </Button>
+
+                    <div className="flex items-center space-x-2">
+                      <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleMuteToggle}
+                          className="text-white hover:bg-white/20"
+                      >
+                        {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                      </Button>
+                      <div className="w-20">
+                        <Slider
+                            value={[volume]}
+                            min={0}
+                            max={100}
+                            step={1}
+                            onValueChange={handleVolumeChange}
+                            className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-white [&_.bg-primary]:bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <span className="text-sm text-white font-mono">
+                    {formatTime(currentTime)} / {formatTime(duration)}
+                  </span>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <div className="relative">
+                      <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+                          className="text-white hover:bg-white/20 text-xs"
+                      >
+                        <Settings className="h-4 w-4 mr-1" />
+                        {playbackSpeed}x
+                      </Button>
+                      {showSpeedMenu && (
+                          <div className="absolute bottom-full right-0 mb-2 bg-black/90 rounded-lg p-2 min-w-[100px]">
+                            <div className="text-xs text-white mb-2 px-2">Speed</div>
+                            {speedOptions.map((option) => (
+                                <button
+                                    key={option.value}
+                                    onClick={() => handleSpeedChange(option.value)}
+                                    className={`block w-full text-left px-2 py-1 text-sm rounded hover:bg-white/20 ${
+                                        playbackSpeed === option.value ? "text-red-500" : "text-white"
+                                    }`}
+                                >
+                                  {option.label}
+                                </button>
+                            ))}
+                          </div>
+                      )}
+                    </div>
+
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={toggleTheaterMode}
+                        className="text-white hover:bg-white/20"
+                    >
+                      {isTheaterMode ? <Maximize className="h-5 w-5" /> : <Minimize className="h-5 w-5" />}
+                    </Button>
+
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          console.log("Fullscreen button clicked in fullscreen mode")
+                          toggleFullscreen()
+                        }}
+                        className="text-white hover:bg-white/20"
+                    >
+                      {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {isTheaterMode && showChatInFullscreen && (
+                <div className="w-80 bg-slate-900 flex flex-col border-l border-slate-700">
+                  <div className="border-b border-slate-700 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="font-semibold text-white flex items-center">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                        Live Chat
+                      </h2>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="secondary" className="bg-blue-500/20 text-blue-300">
+                          {messages.length} messages
+                        </Badge>
+                        {unreadCount > 0 && (
+                            <Badge
+                                variant="destructive"
+                                className="bg-red-500 text-white cursor-pointer animate-pulse"
+                                onClick={scrollToBottom}
+                            >
+                              {unreadCount} new
+                            </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1">
+                      {activeUsers.slice(0, 8).map((user) => (
+                          <TooltipProvider key={user.id}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="relative">
+                                  <Avatar className="h-6 w-6 border border-green-500/50">
+                                    <AvatarImage src={user.avatar || "/placeholder.svg"} />
+                                    <AvatarFallback className="text-xs bg-blue-600 text-white">
+                                      {getInitials(user.name)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  {user.isOwner && <Crown className="absolute -top-1 -right-1 h-3 w-3 text-yellow-500" />}
+                                  <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-slate-900"></div>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  {user.name} {user.isOwner && "(Owner)"}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex-1 overflow-hidden">
+                    <ScrollArea className="h-full p-4">
+                      <div ref={chatContainerRef} className="space-y-4">
+                        {messages.length > 0 ? (
+                            messages.map((msg) => (
+                                <div
+                                    key={msg.id}
+                                    className={`flex ${isCurrentUser(msg.userId) ? "justify-end" : "justify-start"}`}
+                                >
+                                  <div
+                                      className={`flex max-w-[80%] ${
+                                          isCurrentUser(msg.userId) ? "flex-row-reverse" : "flex-row"
+                                      } items-start space-x-2`}
+                                  >
+                                    {!isCurrentUser(msg.userId) && (
+                                        <Avatar className="h-6 w-6 flex-shrink-0">
+                                          <AvatarImage src={msg.avatar || "/placeholder.svg"} />
+                                          <AvatarFallback className="text-xs bg-blue-600 text-white">
+                                            {getInitials(msg.user)}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                    )}
+                                    <div
+                                        className={`rounded-2xl px-3 py-2 ${
+                                            isCurrentUser(msg.userId)
+                                                ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-br-md"
+                                                : "bg-slate-800 text-white rounded-bl-md"
+                                        }`}
+                                    >
+                                      <div className="flex items-center space-x-2 mb-1">
+                                <span className="text-xs font-medium opacity-80">
+                                  {isCurrentUser(msg.userId) ? "You" : msg.user}
+                                </span>
+                                        <span className="text-xs opacity-60">{formatTime12Hour(msg.timestamp)}</span>
+                                      </div>
+                                      <p className="text-sm leading-relaxed">{msg.text}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="flex h-32 items-center justify-center text-slate-400">
+                              <div className="text-center">
+                                <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                                  <Send className="h-6 w-6 text-blue-400" />
+                                </div>
+                                <p>No messages yet</p>
+                                <p className="text-xs">Start the conversation!</p>
+                              </div>
+                            </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+
+                  <div className="border-t border-slate-700 p-4">
+                    <form onSubmit={handleSendMessage} className="flex space-x-2">
+                      <Textarea
+                          value={message}
+                          onChange={(e) => setMessage(e.target.value)}
+                          placeholder="Type your message..."
+                          className="min-h-[40px] flex-1 resize-none bg-slate-800 border-slate-600 text-white placeholder:text-slate-400 focus:border-blue-500"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault()
+                              e.currentTarget.form?.requestSubmit()
+                            }
+                          }}
+                      />
+                      <Button
+                          type="submit"
+                          size="icon"
+                          disabled={!message.trim()}
+                          className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white disabled:opacity-50"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </form>
+                  </div>
+                </div>
+            )}
+          </div>
+        </AuthCheck>
+    )
+  }
+
+  // Normal layout
   return (
       <AuthCheck redirectTo="/login">
         <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-          {/* Elegant grid background */}
           <div className="fixed inset-0 elegant-grid opacity-40"></div>
-
-          {/* Subtle floating elements */}
           <div className="fixed inset-0 pointer-events-none overflow-hidden">
             <div className="absolute top-20 left-20 w-32 h-32 bg-blue-200/20 dark:bg-blue-400/10 rounded-full blur-xl animate-gentle-float"></div>
             <div className="absolute top-40 right-32 w-24 h-24 bg-indigo-200/20 dark:bg-indigo-400/10 rounded-full blur-xl animate-gentle-float delay-200"></div>
@@ -593,7 +1189,6 @@ export default function RoomPage() {
           </div>
 
           <div className="container mx-auto grid min-h-screen grid-rows-[auto_1fr] gap-6 p-6 relative z-10">
-            {/* Header */}
             <header className="elegant-card rounded-2xl p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
@@ -644,18 +1239,29 @@ export default function RoomPage() {
                     <Share2 className="mr-2 h-4 w-4" />
                     Share Room
                   </Button>
+                  <Button
+                      variant="outline"
+                      onClick={testFullscreenCapabilities}
+                      className="bg-red-500 hover:bg-red-600 text-white border-0"
+                  >
+                    Test Fullscreen
+                  </Button>
                 </div>
               </div>
             </header>
 
-            <div className="grid gap-6 lg:grid-cols-[2fr_1fr] h-[calc(100vh-200px)]">
-              {/* Video Section */}
-              <div className="flex flex-col space-y-4 h-full">
+            <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+              <div className="flex flex-col space-y-4">
                 <div
                     ref={videoContainerRef}
                     className="group relative aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl flex-shrink-0"
                     onMouseMove={handleMouseMove}
                     onMouseLeave={() => isPlaying && setShowControls(false)}
+                    onDoubleClick={handleDoubleClick}
+                    style={{ cursor: "pointer" }}
+                    tabIndex={0} // Make it focusable
+                    role="button" // Indicate it's interactive
+                    aria-label="Video player - double click or press F for fullscreen"
                 >
                   <video
                       ref={videoRef}
@@ -691,13 +1297,11 @@ export default function RoomPage() {
                       }}
                   />
 
-                  {/* YouTube-style Video Controls */}
                   <div
                       className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 transition-opacity duration-300 ${
                           showControls ? "opacity-100" : "opacity-0"
                       }`}
                   >
-                    {/* Progress Bar */}
                     <div className="mb-4">
                       <Slider
                           value={[currentTime]}
@@ -709,10 +1313,8 @@ export default function RoomPage() {
                       />
                     </div>
 
-                    {/* Control Buttons */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        {/* Play/Pause */}
                         <Button
                             variant="ghost"
                             size="icon"
@@ -722,7 +1324,6 @@ export default function RoomPage() {
                           {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
                         </Button>
 
-                        {/* Volume */}
                         <div className="flex items-center space-x-2">
                           <Button
                               variant="ghost"
@@ -744,14 +1345,12 @@ export default function RoomPage() {
                           </div>
                         </div>
 
-                        {/* Time Display */}
                         <span className="text-sm text-white font-mono">
                         {formatTime(currentTime)} / {formatTime(duration)}
                       </span>
                       </div>
 
                       <div className="flex items-center space-x-2">
-                        {/* Speed Control */}
                         <div className="relative">
                           <Button
                               variant="ghost"
@@ -780,26 +1379,29 @@ export default function RoomPage() {
                           )}
                         </div>
 
-                        {/* Fullscreen */}
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={toggleFullscreen}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              console.log("Fullscreen button clicked in normal mode")
+                              toggleFullscreen()
+                            }}
                             className="text-white hover:bg-white/20"
                         >
-                          <Maximize className="h-5 w-5" />
+                          {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
                         </Button>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Video List */}
                 <div className="flex-1 overflow-y-auto space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Videos</h3>
                     <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 dark:text-blue-300">
-                      {videos.length} videos
+                      {getVideoCountText(videos.length)}
                     </Badge>
                   </div>
 
@@ -844,13 +1446,21 @@ export default function RoomPage() {
                                 className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center w-6 h-6 rounded-full bg-red-500/20 hover:bg-red-500/40"
                                 aria-label={`Delete ${video.originalName}`}
                             >
-                              <X className="w-4 h-4 text-red-500" strokeWidth={2.5} />
+                              <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="w-4 h-4 text-red-500"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={2.5}
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
                             </button>
                           </Card>
                       ))
                   )}
 
-                  {/* Upload Card */}
                   <Card className="elegant-card border-blue-200/50 dark:border-blue-800/50 border-dashed">
                     <form onSubmit={handleVideoUpload}>
                       <CardContent className="p-6">
@@ -907,9 +1517,10 @@ export default function RoomPage() {
                 </div>
               </div>
 
-              {/* Chat Section - Fixed height matching video section */}
-              <div className="flex flex-col elegant-card rounded-2xl overflow-hidden h-full">
-                {/* Chat Header */}
+              <div
+                  className="flex flex-col elegant-card rounded-2xl overflow-hidden"
+                  style={{ height: "fit-content", maxHeight: "calc(100vh - 200px)" }}
+              >
                 <div className="border-b border-blue-200/50 dark:border-blue-800/50 p-4 flex-shrink-0">
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="font-semibold text-slate-900 dark:text-white flex items-center">
@@ -932,7 +1543,6 @@ export default function RoomPage() {
                     </div>
                   </div>
 
-                  {/* Active Users */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-slate-600 dark:text-slate-400">Active ({activeUsers.length})</span>
@@ -943,7 +1553,16 @@ export default function RoomPage() {
                               onClick={() => setShowParticipants(false)}
                               className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                           >
-                            <X className="h-3 w-3" />
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-3 w-3"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                           </Button>
                       )}
                     </div>
@@ -1018,8 +1637,7 @@ export default function RoomPage() {
                   </div>
                 </div>
 
-                {/* Messages */}
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden" style={{ height: "400px" }}>
                   <ScrollArea className="h-full p-4">
                     <div ref={chatContainerRef} className="space-y-4">
                       {messages.length > 0 ? (
@@ -1052,12 +1670,7 @@ export default function RoomPage() {
                                 <span className="text-xs font-medium opacity-80">
                                   {isCurrentUser(msg.userId) ? "You" : msg.user}
                                 </span>
-                                      <span className="text-xs opacity-60">
-                                  {msg.timestamp.toLocaleTimeString([], {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </span>
+                                      <span className="text-xs opacity-60">{formatTime12Hour(msg.timestamp)}</span>
                                     </div>
                                     <p className="text-sm leading-relaxed">{msg.text}</p>
                                   </div>
@@ -1079,7 +1692,6 @@ export default function RoomPage() {
                   </ScrollArea>
                 </div>
 
-                {/* Message Input */}
                 <div className="border-t border-blue-200/50 dark:border-blue-800/50 p-4 flex-shrink-0">
                   <form onSubmit={handleSendMessage} className="flex space-x-2">
                     <Textarea
