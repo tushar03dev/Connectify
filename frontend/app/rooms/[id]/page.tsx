@@ -72,34 +72,6 @@ interface RoomHeaderProps {
   copied: boolean
 }
 
-interface VideoPlayerProps {
-  videoRef: React.RefObject<HTMLVideoElement>
-  selectedVideoPath: string | null
-  isPlaying: boolean
-  volume: number
-  isMuted: boolean
-  currentTime: number
-  duration: number
-  playbackSpeed: number
-  showControls: boolean
-  isFullscreen: boolean
-  isTheaterMode: boolean
-  showChatInFullscreen: boolean
-  showSpeedMenu: boolean
-  videoContainerRef: React.RefObject<HTMLDivElement>
-  handlePlayPause: () => void
-  handleVolumeChange: (value: number[]) => void
-  handleMuteToggle: () => void
-  handleSeek: (value: number[]) => void
-  handleSpeedChange: (speed: number) => void
-  toggleTheaterMode: () => void
-  toggleFullscreen: () => void
-  handleMouseMove: () => void
-  handleDoubleClick: () => void
-  setShowSpeedMenu: React.Dispatch<React.SetStateAction<boolean>>
-  setShowChatInFullscreen: React.Dispatch<React.SetStateAction<boolean>>
-}
-
 interface VideoListProps {
   videos: VideoItem[]
   isLoading: boolean
@@ -191,218 +163,6 @@ const RoomHeader: React.FC<RoomHeaderProps> = ({
   )
 }
 
-
-const VideoPlayer: React.FC<VideoPlayerProps> = ({
-                                                   videoRef,
-                                                   selectedVideoPath,
-                                                   isPlaying,
-                                                   volume,
-                                                   isMuted,
-                                                   currentTime,
-                                                   duration,
-                                                   playbackSpeed,
-                                                   showControls,
-                                                   isFullscreen,
-                                                   isTheaterMode,
-                                                   showChatInFullscreen,
-                                                   showSpeedMenu,
-                                                   videoContainerRef,
-                                                   handlePlayPause,
-                                                   handleVolumeChange,
-                                                   handleMuteToggle,
-                                                   handleSeek,
-                                                   handleSpeedChange,
-                                                   toggleTheaterMode,
-                                                   toggleFullscreen,
-                                                   handleMouseMove,
-                                                   handleDoubleClick,
-                                                   setShowSpeedMenu,
-                                                   setShowChatInFullscreen,
-                                                 }) => {
-  const speedOptions = [
-    { value: 0.25, label: "0.25x" },
-    { value: 0.5, label: "0.5x" },
-    { value: 0.75, label: "0.75x" },
-    { value: 1, label: "Normal" },
-    { value: 1.25, label: "1.25x" },
-    { value: 1.5, label: "1.5x" },
-    { value: 2, label: "2x" },
-    { value: 2.5, label: "2.5x" },
-  ]
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${mins}:${secs < 10 ? "0" : ""}${secs}`
-  }
-
-  return (
-      <div
-          className={`group relative aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl flex-shrink-0 ${
-              isFullscreen ? `fixed inset-0 z-50 flex ${isTheaterMode && showChatInFullscreen ? "flex-1" : "w-full"} flex-col` : ""
-          }`}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={() => isPlaying && !isFullscreen && showControls}
-          onDoubleClick={handleDoubleClick}
-          ref={videoContainerRef}
-          style={{ cursor: "pointer" }}
-          tabIndex={0}
-          role="button"
-          aria-label="Video player - double click or press F for fullscreen"
-      >
-        <video
-            ref={videoRef}
-            className="h-full w-full object-contain"
-            src={selectedVideoPath || undefined}
-            onTimeUpdate={() => {
-              if (videoRef.current) {
-                handleSeek([videoRef.current.currentTime])
-                duration = videoRef.current.duration || 100
-              }
-            }}
-            onPlay={() => isPlaying}
-            onPause={() => isPlaying}
-            onError={(e) => {
-              const videoElement = e.target as HTMLVideoElement
-              const error = videoElement.error
-              console.error("Video element error:", {
-                message: error?.message,
-                code: error?.code,
-                src: videoElement.src,
-                networkState: videoElement.networkState,
-                readyState: videoElement.readyState,
-              })
-              isPlaying = false
-            }}
-        />
-
-        {isTheaterMode && isFullscreen && (
-            <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  console.log("Toggling chat panel, current state:", showChatInFullscreen)
-                  setShowChatInFullscreen(!showChatInFullscreen)
-                }}
-                className="absolute top-4 right-4 text-white hover:bg-white/20 bg-black/50 rounded-full p-2 z-10"
-            >
-              <MessageSquare className="h-5 w-5" />
-            </Button>
-        )}
-
-        <div
-            className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 transition-opacity duration-300 ${
-                showControls ? "opacity-100" : "opacity-0"
-            }`}
-        >
-          <div className="mb-4">
-            <Slider
-                value={[currentTime]}
-                min={0}
-                max={duration || 100}
-                step={0.1}
-                onValueChange={handleSeek}
-                className="w-full [&_[role=slider]]:bg-red-500 [&_[role=slider]]:border-red-500 [&_.bg-primary]:bg-red-500"
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handlePlayPause}
-                  className="text-white hover:bg-white/20"
-              >
-                {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
-              </Button>
-
-              <div className="flex items-center space-x-2">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleMuteToggle}
-                    className="text-white hover:bg-white/20"
-                >
-                  {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-                </Button>
-                <div className="w-20">
-                  <Slider
-                      value={[volume]}
-                      min={0}
-                      max={100}
-                      step={1}
-                      onValueChange={handleVolumeChange}
-                      className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-white [&_.bg-primary]:bg-white"
-                  />
-                </div>
-              </div>
-
-              <span className="text-sm text-white font-mono">
-              {formatTime(currentTime)} / {formatTime(duration)}
-            </span>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <div className="relative">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-                    className="text-white hover:bg-white/20 text-xs"
-                >
-                  <Settings className="h-4 w-4 mr-1" />
-                  {playbackSpeed}x
-                </Button>
-                {showSpeedMenu && (
-                    <div className="absolute bottom-full right-0 mb-2 bg-black/90 rounded-lg p-2 min-w-[100px]">
-                      <div className="text-xs text-white mb-2 px-2">Speed</div>
-                      {speedOptions.map((option) => (
-                          <button
-                              key={option.value}
-                              onClick={() => handleSpeedChange(option.value)}
-                              className={`block w-full text-left px-2 py-1 text-sm rounded hover:bg-white/20 ${
-                                  playbackSpeed === option.value ? "text-red-500" : "text-white"
-                              }`}
-                          >
-                            {option.label}
-                          </button>
-                      ))}
-                    </div>
-                )}
-              </div>
-
-              <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    console.log(`Fullscreen button clicked in ${isFullscreen ? "fullscreen" : "normal"} mode`)
-                    toggleFullscreen()
-                  }}
-                  className="text-white hover:bg-white/20"
-              >
-                {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
-              </Button>
-              {!isFullscreen && (
-                  <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={toggleTheaterMode}
-                      className="text-white hover:bg-white/20"
-                  >
-                    {isTheaterMode ? <Maximize className="h-5 w-5" /> : <Minimize className="h-5 w-5" />}
-                  </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-  )
-}
-
 const VideoList: React.FC<VideoListProps> = ({
                                                videos,
                                                isLoading,
@@ -413,16 +173,12 @@ const VideoList: React.FC<VideoListProps> = ({
                                                handlePlayClick,
                                                handleDeleteClick,
                                              }) => {
-  const getVideoCountText = (count: number) => {
-    return count === 1 ? "1 video" : `${count} videos`
-  }
-
   return (
       <div className="flex-1 overflow-y-auto space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Videos</h3>
           <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 dark:text-blue-300">
-            {getVideoCountText(videos.length)}
+              {videos.length == 1 ? "1 video" : `${videos.length} videos`}
           </Badge>
         </div>
 
@@ -546,9 +302,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                                            users,
                                            showParticipants,
                                            unreadCount,
-                                           isAtBottom,
-                                           chatContainerRef,
-                                           handleSendMessage,
+                                             chatContainerRef,
+                                             handleSendMessage,
                                            scrollToBottom,
                                            setShowParticipants,
                                          }) => {
@@ -592,7 +347,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
             </h2>
             <div className="flex items-center space-x-2">
               <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 dark:text-blue-300">
-                {messages.length} messages
+                {messages.length == 1 ? "1 message" : `${messages.length} messages`}
               </Badge>
               {unreadCount > 0 && (
                   <Badge
@@ -798,8 +553,8 @@ export default function RoomPage() {
     const [messages, setMessages] = useState<Message[]>([])
     const [users, setUsers] = useState<User[]>([])
     const [isFullscreen, setIsFullscreen] = useState(false)
-    const [isTheaterMode, setIsTheaterMode] = useState(false)
-    const [showChatInFullscreen, setShowChatInFullscreen] = useState(true)
+    const [isTheaterMode, setIsTheaterMode] = useState(true)
+    const [showChatInFullscreen, setShowChatInFullscreen] = useState(false)
     const [showParticipants, setShowParticipants] = useState(false)
     const [showControls, setShowControls] = useState(true)
     const [playbackSpeed, setPlaybackSpeed] = useState(1)
@@ -1522,9 +1277,9 @@ export default function RoomPage() {
     }
 
     const toggleTheaterMode = () => {
+        toggleFullscreen()
         if (!isFullscreen) {
-            toggleFullscreen()
-            setIsTheaterMode(true)
+            setIsTheaterMode(false)
         } else {
             setIsTheaterMode(!isTheaterMode)
         }
@@ -1551,7 +1306,6 @@ export default function RoomPage() {
     }
 
     const activeUsers = users.filter((u) => u.isActive)
-    const inactiveUsers = users.filter((u) => !u.isActive)
 
     const getInitials = (name: string) => {
         return name
@@ -1564,10 +1318,6 @@ export default function RoomPage() {
 
     const isCurrentUser = (userId: string) => {
         return userId === user?.id || userId === "current-user"
-    }
-
-    const getVideoCountText = (count: number) => {
-        return count === 1 ? "1 video" : `${count} videos`
     }
 
 
@@ -1647,8 +1397,8 @@ export default function RoomPage() {
                                     }}
                                 />
 
-                                {/* >> Chat Toggle (top-right, only in fullscreen + theater) */}
-                                {isFullscreen && isTheaterMode && (
+                                {/* >> Chat Toggle (top-right, only in fullscreen) */}
+                                {isFullscreen && (
                                     <Button
                                         variant="ghost"
                                         size="icon"
@@ -1749,14 +1499,14 @@ export default function RoomPage() {
                                                 onClick={toggleTheaterMode}
                                                 className="text-white hover:bg-white/20"
                                             >
-                                                {isTheaterMode ? <Maximize className="h-5 w-5" /> : <Minimize className="h-5 w-5" />}
+                                                {isTheaterMode ?  <Maximize className="h-5 w-5" /> : <Minimize className="h-5 w-5" /> }
                                             </Button>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* >> CHAT PANEL (only in fullscreen + theater + showChatInFullscreen) */}
-                                {isFullscreen && isTheaterMode && showChatInFullscreen && (
+                                {isFullscreen && showChatInFullscreen && (
                                     <div
                                         className="w-80 bg-slate-900 flex flex-col border-l border-slate-700 h-full absolute right-0 top-0">
                                         <div className="border-b border-slate-700 p-4">
