@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { UserNav } from "@/components/user-nav"
 import { AuthCheck } from "@/components/auth-check"
 import { Play, Users, Video, MessageCircle, Share2, ArrowRight, CheckCircle, Zap, Shield, Globe } from "lucide-react"
+import {ElegantCardWrapper} from "@/components/ui/elegant-card";
 
 export const metadata: Metadata = {
   title: "Connectify - Watch Together",
@@ -25,7 +26,7 @@ export default function Home() {
         </div>
 
         {/* Header */}
-        <header className="sticky top-0 z-50 w-full border-b border-white/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
+        <header className="sticky  z-50 w-full border-b border-white/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
           <div className="container flex h-16 items-center justify-between">
             <Link href="/" className="flex items-center space-x-3 group">
               <div className="relative">
@@ -60,10 +61,10 @@ export default function Home() {
           </div>
         </header>
 
-        <main className="flex-1 relative z-10">
+        <main className="flex-1 z-10">
           {/* Hero Section */}
-          <section className="w-full py-24 md:py-32 lg:py-40">
-            <div className="container px-4 md:px-6">
+          <section className="py-24 md:py-32 lg:py-20">
+            <div className="container">
               <div className="flex flex-col items-center space-y-8 text-center">
                 {/* Badge */}
                 <div className="opacity-0 animate-fade-in-up">
@@ -132,10 +133,10 @@ export default function Home() {
           </section>
 
           {/* Features Section */}
-          <section id="features" className="w-full py-24 md:py-32 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+          <section id="features" className="w-full py-20 md:py-25 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
             <div className="container px-4 md:px-6">
               <div className="text-center mb-16">
-                <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl text-gradient mb-4">
+                <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl text-gradient mb-4 pb-4">
                   Elegant Features
                 </h2>
                 <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
@@ -185,6 +186,7 @@ export default function Home() {
                     delay: "delay-600",
                   },
                 ].map((feature, index) => (
+                    <ElegantCardWrapper key={index}>
                     <div key={index} className={`elegant-card rounded-xl p-8 opacity-0 animate-scale-in ${feature.delay}`}>
                       <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white mb-6">
                         <feature.icon className="w-6 h-6" />
@@ -192,6 +194,7 @@ export default function Home() {
                       <h3 className="text-xl font-semibold mb-3 text-slate-900 dark:text-white">{feature.title}</h3>
                       <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{feature.description}</p>
                     </div>
+                    </ElegantCardWrapper>
                 ))}
               </div>
             </div>
@@ -239,7 +242,9 @@ export default function Home() {
 
                 <div className="opacity-0 animate-fade-in-right">
                   <div className="relative">
-                    <div className="elegant-card rounded-2xl p-8 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+                    <ElegantCardWrapper styleProperties={`elegant-card rounded-2xl p-8 bg-gradient-to-br from-blue-50 
+                    to-indigo-50 dark:from-blue-950 dark:to-indigo-950 `}
+                    >
                       <div className="space-y-6">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
@@ -273,7 +278,8 @@ export default function Home() {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </ElegantCardWrapper>
+
                   </div>
                 </div>
               </div>
