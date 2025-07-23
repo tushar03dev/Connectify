@@ -25,7 +25,7 @@ export default function Home() {
         </div>
 
         {/* Header */}
-        <header className="sticky top-0 z-50 w-full border-b border-white/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
+        <header className="sticky  z-50 w-full border-b border-white/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
           <div className="container flex h-16 items-center justify-between">
             <Link href="/" className="flex items-center space-x-3 group">
               <div className="relative">
@@ -60,10 +60,10 @@ export default function Home() {
           </div>
         </header>
 
-        <main className="flex-1 relative z-10">
+        <main className="flex-1 z-10">
           {/* Hero Section */}
-          <section className="w-full py-24 md:py-32 lg:py-40">
-            <div className="container px-4 md:px-6">
+          <section className="py-24 md:py-32 lg:py-20">
+            <div className="container">
               <div className="flex flex-col items-center space-y-8 text-center">
                 {/* Badge */}
                 <div className="opacity-0 animate-fade-in-up">
@@ -132,10 +132,10 @@ export default function Home() {
           </section>
 
           {/* Features Section */}
-          <section id="features" className="w-full py-24 md:py-32 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+          <section id="features" className="w-full py-20 md:py-25 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
             <div className="container px-4 md:px-6">
               <div className="text-center mb-16">
-                <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl text-gradient mb-4">
+                <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl text-gradient mb-4 pb-4">
                   Elegant Features
                 </h2>
                 <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
