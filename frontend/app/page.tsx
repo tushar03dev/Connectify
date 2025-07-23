@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { UserNav } from "@/components/user-nav"
 import { AuthCheck } from "@/components/auth-check"
 import { Play, Users, Video, MessageCircle, Share2, ArrowRight, CheckCircle, Zap, Shield, Globe } from "lucide-react"
+import {ElegantCardWrapper} from "@/components/ui/elegant-card";
 
 export const metadata: Metadata = {
   title: "Connectify - Watch Together",
@@ -185,6 +186,7 @@ export default function Home() {
                     delay: "delay-600",
                   },
                 ].map((feature, index) => (
+                    <ElegantCardWrapper key={index}>
                     <div key={index} className={`elegant-card rounded-xl p-8 opacity-0 animate-scale-in ${feature.delay}`}>
                       <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white mb-6">
                         <feature.icon className="w-6 h-6" />
@@ -192,6 +194,7 @@ export default function Home() {
                       <h3 className="text-xl font-semibold mb-3 text-slate-900 dark:text-white">{feature.title}</h3>
                       <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{feature.description}</p>
                     </div>
+                    </ElegantCardWrapper>
                 ))}
               </div>
             </div>
@@ -239,7 +242,9 @@ export default function Home() {
 
                 <div className="opacity-0 animate-fade-in-right">
                   <div className="relative">
-                    <div className="elegant-card rounded-2xl p-8 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+                    <ElegantCardWrapper styleProperties={`elegant-card rounded-2xl p-8 bg-gradient-to-br from-blue-50 
+                    to-indigo-50 dark:from-blue-950 dark:to-indigo-950 `}
+                    >
                       <div className="space-y-6">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
@@ -273,7 +278,8 @@ export default function Home() {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </ElegantCardWrapper>
+
                   </div>
                 </div>
               </div>
