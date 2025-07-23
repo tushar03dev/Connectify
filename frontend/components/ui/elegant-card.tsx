@@ -38,11 +38,9 @@ interface ElegantCardWrapperProps {
     return (
         <div
             ref={cardRef}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
             className={`${styleProperties} [transform-style:preserve-3d] [perspective:500px] 
-            [transform:rotateX(2deg)_rotateY(2deg)] transition-transform duration-300 
-                    ease-in-out hover:[transform:rotateX(10deg)_rotateY(16deg)]`}
+            [transform:rotateX(4deg)_rotateY(4deg)] transition-transform duration-300 
+                    ease-in-out hover:[transform:rotateX(10deg)_rotateY(-16deg)]`}
             style={tiltStyle} // Overrides with dynamic tilt
         >
             {children}
