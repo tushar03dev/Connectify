@@ -1,539 +1,540 @@
 "use client"
 
 import type React from "react"
-import { v4 as uuidv4 } from "uuid"
-import { useEffect, useRef, useState } from "react"
-import { useParams } from "next/navigation"
-import { AuthCheck } from "@/components/auth-check"
-import { Button } from "@/components/ui/button"
-import { Slider } from "@/components/ui/slider"
-import { Textarea } from "@/components/ui/textarea"
-import { useAuth } from "@/components/auth-provider"
+import {v4 as uuidv4} from "uuid"
+import {useEffect, useRef, useState} from "react"
+import {useParams} from "next/navigation"
+import {AuthCheck} from "@/components/auth-check"
+import {Button} from "@/components/ui/button"
+import {Slider} from "@/components/ui/slider"
+import {Textarea} from "@/components/ui/textarea"
+import {useAuth} from "@/components/auth-provider"
 import {
-  Pause,
-  Play,
-  Send,
-  Share2,
-  Video,
-  Volume2,
-  VolumeX,
-  Maximize,
-  Users,
-  Copy,
-  Crown,
-  Settings,
-  Upload,
-  Check,
-  MessageSquare,
-  Minimize,
+    Pause,
+    Play,
+    Send,
+    Share2,
+    Video,
+    Volume2,
+    VolumeX,
+    Maximize,
+    Users,
+    Copy,
+    Crown,
+    Settings,
+    Upload,
+    Check,
+    MessageSquare,
+    Minimize
 } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
-import { useVideo } from "@/components/video-provider"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { io, type Socket } from "socket.io-client"
-import type { DefaultEventsMap } from "@socket.io/component-emitter"
+import {Card, CardContent} from "@/components/ui/card"
+import {useVideo} from "@/components/video-provider"
+import {Input} from "@/components/ui/input"
+import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar"
+import {Badge} from "@/components/ui/badge"
+import {Separator} from "@/components/ui/separator"
+import {ScrollArea} from "@/components/ui/scroll-area"
+import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip"
+import {io, type Socket} from "socket.io-client"
+import type {DefaultEventsMap} from "@socket.io/component-emitter"
 
 interface User {
-  id: string
-  name: string
-  avatar?: string
-  isActive: boolean
-  isOwner?: boolean
+    id: string
+    name: string
+    avatar?: string
+    isActive: boolean
+    isOwner?: boolean
 }
 
 interface Message {
-  id: string
-  user: string
-  userId: string
-  text: string
-  timestamp: Date
-  avatar?: string
+    id: string
+    user: string
+    userId: string
+    text: string
+    timestamp: Date
+    avatar?: string
 }
 
 interface VideoItem {
-  _id: string
-  originalName: string
-  uploadedBy?: string
-  uploadedByName?: string
+    _id: string
+    originalName: string
+    uploadedBy?: string
+    uploadedByName?: string
 }
 
 interface RoomHeaderProps {
-  id: string
-  users: User[]
-  showParticipants: boolean
-  setShowParticipants: React.Dispatch<React.SetStateAction<boolean>>
-  handleCopyRoomCode: () => void
-  handleShareRoom: () => void
-  copied: boolean
+    id: string
+    users: User[]
+    showParticipants: boolean
+    setShowParticipants: React.Dispatch<React.SetStateAction<boolean>>
+    handleCopyRoomCode: () => void
+    handleShareRoom: () => void
+    copied: boolean
 }
 
 interface VideoListProps {
-  videos: VideoItem[]
-  isLoading: boolean
-  isUploading: boolean
-  videoFile: File | null
-  setVideoFile: React.Dispatch<React.SetStateAction<File | null>>
-  handleVideoUpload: (e: React.FormEvent) => Promise<void>
-  handlePlayClick: (videoId: string) => void
-  handleDeleteClick: (videoId: string) => void
+    videos: VideoItem[]
+    isLoading: boolean
+    isUploading: boolean
+    videoFile: File | null
+    setVideoFile: React.Dispatch<React.SetStateAction<File | null>>
+    handleVideoUpload: (e: React.FormEvent) => Promise<void>
+    handlePlayClick: (videoId: string) => void
+    handleDeleteClick: (videoId: string) => void
 }
 
 interface ChatBoxProps {
-  messages: Message[]
-  message: string
-  setMessage: React.Dispatch<React.SetStateAction<string>>
-  users: User[]
-  showParticipants: boolean
-  unreadCount: number
-  isAtBottom: boolean
-  chatContainerRef: React.RefObject<HTMLDivElement>
-  handleSendMessage: (e: React.FormEvent) => void
-  scrollToBottom: () => void
-  setShowParticipants: React.Dispatch<React.SetStateAction<boolean>>
+    messages: Message[]
+    message: string
+    setMessage: React.Dispatch<React.SetStateAction<string>>
+    users: User[]
+    showParticipants: boolean
+    unreadCount: number
+    isAtBottom: boolean
+    chatContainerRef: React.RefObject<HTMLDivElement>
+    handleSendMessage: (e: React.FormEvent) => void
+    scrollToBottom: () => void
+    setShowParticipants: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 const RoomHeader: React.FC<RoomHeaderProps> = ({
-                                                 id,
-                                                 users,
-                                                 showParticipants,
-                                                 setShowParticipants,
-                                                 handleCopyRoomCode,
-                                                 handleShareRoom,
-                                                 copied,
-                                               })=> {
-  return (
-      <header className="elegant-card rounded-2xl p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Room</h1>
+                                                   id, users, showParticipants, setShowParticipants,
+                                                   handleCopyRoomCode, handleShareRoom, copied
+                                               }) => {
+    return (
+        <header className="elegant-card rounded-2xl p-4">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                        <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div>
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Room</h1>
+                    </div>
+                    <div className="flex items-center space-x-2 elegant-card rounded-lg px-3 py-1">
+                        <span className="text-sm text-slate-600 dark:text-slate-300">Code:</span>
+                        <code className="text-lg font-mono text-blue-600 dark:text-blue-400">{id}</code>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCopyRoomCode}
+                            className="h-6 w-6 p-0 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                        >
+                            {copied ? <Check className="h-3 w-3"/> : <Copy className="h-3 w-3"/>}
+                        </Button>
+                        {copied && (
+                            <span className="text-xs text-green-600 dark:text-green-400 animate-fade-in">Copied!</span>
+                        )}
+                    </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setShowParticipants(!showParticipants)}
+                                    className="text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                >
+                                    <Users className="mr-2 h-4 w-4"/>
+                                    {users.length}
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>View participants</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                    <Button
+                        variant="outline"
+                        onClick={handleShareRoom}
+                        className="elegant-button bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0"
+                    >
+                        <Share2 className="mr-2 h-4 w-4"/>
+                        Share Room
+                    </Button>
+                </div>
             </div>
-            <div className="flex items-center space-x-2 elegant-card rounded-lg px-3 py-1">
-              <span className="text-sm text-slate-600 dark:text-slate-300">Code:</span>
-              <code className="text-lg font-mono text-blue-600 dark:text-blue-400">{id}</code>
-              <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCopyRoomCode}
-                  className="h-6 w-6 p-0 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-              >
-                {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-              </Button>
-              {copied && (
-                  <span className="text-xs text-green-600 dark:text-green-400 animate-fade-in">Copied!</span>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowParticipants(!showParticipants)}
-                      className="text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  >
-                    <Users className="mr-2 h-4 w-4" />
-                    {users.length}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>View participants</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <Button
-                variant="outline"
-                onClick={handleShareRoom}
-                className="elegant-button bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0"
-            >
-              <Share2 className="mr-2 h-4 w-4" />
-              Share Room
-            </Button>
-          </div>
-        </div>
-      </header>
-  )
+        </header>
+    )
 }
 
 const VideoList: React.FC<VideoListProps> = ({
-                                               videos,
-                                               isLoading,
-                                               isUploading,
-                                               videoFile,
-                                               setVideoFile,
-                                               handleVideoUpload,
-                                               handlePlayClick,
-                                               handleDeleteClick,
+                                                 videos, isLoading, isUploading, videoFile, setVideoFile,
+                                                 handleVideoUpload, handlePlayClick, handleDeleteClick
                                              }) => {
-  return (
-      <div className="flex-1 overflow-y-auto space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Videos</h3>
-          <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 dark:text-blue-300">
-              {videos.length == 1 ? "1 video" : `${videos.length} videos`}
-          </Badge>
-        </div>
-
-        {videos.length === 0 ? (
-            <div className="elegant-card rounded-xl p-8 text-center">
-              <div className="w-16 h-16 bg-slate-200/50 dark:bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Video className="h-8 w-8 text-slate-400" />
-              </div>
-              <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No videos available</h4>
-              <p className="text-slate-600 dark:text-slate-400">Upload a video to get started</p>
+    return (
+        <div className="flex-1 overflow-y-auto space-y-3">
+            <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Videos</h3>
+                <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 dark:text-blue-300">
+                    {videos.length == 1 ? "1 video" : `${videos.length} videos`}
+                </Badge>
             </div>
-        ) : (
-            videos.map((video: VideoItem) => (
-                <Card
-                    key={video.originalName}
-                    className="elegant-card border-blue-200/50 dark:border-blue-800/50 relative group"
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between pr-8">
-                      <div className="flex items-center space-x-4">
-                        <div className="rounded-full bg-blue-500/20 p-2">
-                          <Video className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium text-slate-900 dark:text-white">{video.originalName}</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">
-                            Shared by {video.uploadedByName || "Unknown User"}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                          size="sm"
-                          onClick={() => handlePlayClick(video._id)}
-                          className="elegant-button bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
-                      >
-                        Play
-                      </Button>
+
+            {videos.length === 0 ? (
+                <div className="elegant-card rounded-xl p-8 text-center">
+                    <div
+                        className="w-16 h-16 bg-slate-200/50 dark:bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Video className="h-8 w-8 text-slate-400"/>
                     </div>
-                  </CardContent>
-                  <button
-                      onClick={() => handleDeleteClick(video._id)}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center w-6 h-6 rounded-full bg-red-500/20 hover:bg-red-500/40"
-                      aria-label={`Delete ${video.originalName}`}
-                  >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="w-4 h-4 text-red-500"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2.5}
+                    <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No videos available</h4>
+                    <p className="text-slate-600 dark:text-slate-400">Upload a video to get started</p>
+                </div>
+            ) : (
+                videos.map((video: VideoItem) => (
+                    <Card
+                        key={video.originalName}
+                        className="elegant-card border-blue-200/50 dark:border-blue-800/50 relative group"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </Card>
-            ))
-        )}
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between pr-8">
+                                <div className="flex items-center space-x-4">
+                                    <div className="rounded-full bg-blue-500/20 p-2">
+                                        <Video className="h-5 w-5 text-blue-600 dark:text-blue-400"/>
+                                    </div>
+                                    <div>
+                                        <h3 className="font-medium text-slate-900 dark:text-white">{video.originalName}</h3>
+                                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                                            Shared by {video.uploadedByName || "Unknown User"}
+                                        </p>
+                                    </div>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    onClick={() => handlePlayClick(video._id)}
+                                    className="elegant-button bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
+                                >
+                                    Play
+                                </Button>
+                            </div>
+                        </CardContent>
+                        <button
+                            onClick={() => handleDeleteClick(video._id)}
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center w-6 h-6 rounded-full bg-red-500/20 hover:bg-red-500/40"
+                            aria-label={`Delete ${video.originalName}`}
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="w-4 h-4 text-red-500"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2.5}
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </Card>
+                ))
+            )}
 
-        <Card className="elegant-card border-blue-200/50 dark:border-blue-800/50 border-dashed">
-          <form onSubmit={handleVideoUpload}>
-            <CardContent className="p-6">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Upload className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">Upload Video</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                  Share a video with everyone in the room
-                </p>
+            <Card className="elegant-card border-blue-200/50 dark:border-blue-800/50 border-dashed">
+                <form onSubmit={handleVideoUpload}>
+                    <CardContent className="p-6">
+                        <div className="text-center">
+                            <div
+                                className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Upload className="h-6 w-6 text-blue-600 dark:text-blue-400"/>
+                            </div>
+                            <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">Upload Video</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                                Share a video with everyone in the room
+                            </p>
 
-                <div className="space-y-4">
-                  <Input
-                      type="file"
-                      id="videoFile"
-                      accept="video/mp4,video/webm,video/avi,video/mov"
-                      onChange={(e) => {
-                        if (e.target.files?.[0]) setVideoFile(e.target.files[0])
-                      }}
-                      className="bg-white/50 dark:bg-slate-800/50 border-blue-200 dark:border-blue-800 text-slate-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 pb-11"
-                  />
+                            <div className="space-y-4">
+                                <Input
+                                    type="file"
+                                    id="videoFile"
+                                    accept="video/mp4,video/webm,video/avi,video/mov"
+                                    onChange={(e) => {
+                                        if (e.target.files?.[0]) setVideoFile(e.target.files[0])
+                                    }}
+                                    className="bg-white/50 dark:bg-slate-800/50 border-blue-200 dark:border-blue-800 text-slate-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 pb-11"
+                                />
 
-                  {videoFile && (
-                      <div className="text-sm text-slate-600 dark:text-slate-400 bg-blue-50/50 dark:bg-blue-900/20 rounded-lg p-3">
-                        <strong>Selected:</strong> {videoFile.name}
-                        <br />
-                        <strong>Size:</strong> {(videoFile.size / (1024 * 1024)).toFixed(2)} MB
-                      </div>
-                  )}
+                                {videoFile && (
+                                    <div
+                                        className="text-sm text-slate-600 dark:text-slate-400 bg-blue-50/50 dark:bg-blue-900/20 rounded-lg p-3">
+                                        <strong>Selected:</strong> {videoFile.name}
+                                        <br/>
+                                        <strong>Size:</strong> {(videoFile.size / (1024 * 1024)).toFixed(2)} MB
+                                    </div>
+                                )}
 
-                  <Button
-                      type="submit"
-                      disabled={!videoFile || isLoading || isUploading}
-                      className="w-full elegant-button bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white disabled:opacity-50"
-                  >
-                    {isLoading || isUploading ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Uploading...
-                        </>
-                    ) : (
-                        <>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Video
-                        </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </form>
-        </Card>
-      </div>
-  )
+                                <Button
+                                    type="submit"
+                                    disabled={!videoFile || isLoading || isUploading}
+                                    className="w-full elegant-button bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white disabled:opacity-50"
+                                >
+                                    {isLoading || isUploading ? (
+                                        <>
+                                            <div
+                                                className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                            Uploading...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Upload className="h-4 w-4 mr-2"/>
+                                            Upload Video
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </CardContent>
+                </form>
+            </Card>
+        </div>
+    )
 }
 
 const ChatBox: React.FC<ChatBoxProps> = ({
-                                           messages,
-                                           message,
-                                           setMessage,
-                                           users,
-                                           showParticipants,
-                                           unreadCount,
+                                             messages,
+                                             message,
+                                             setMessage,
+                                             users,
+                                             showParticipants,
+                                             unreadCount,
                                              chatContainerRef,
                                              handleSendMessage,
-                                           scrollToBottom,
-                                           setShowParticipants,
+                                             scrollToBottom,
+                                             setShowParticipants,
                                          }) => {
-  const formatTime12Hour = (date: Date) => {
-    return date.toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    })
-  }
 
-  const getInitials = (name: string) => {
-    return name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-  }
+    const formatTime12Hour = (date: Date) => {
+        return date.toLocaleTimeString([], {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+        })
+    }
 
-  const isCurrentUser = (userId: string) => {
-    const { user } = useAuth()
-    return userId === user?.id || userId === "current-user"
-  }
+    const getInitials = (name: string) => {
+        return name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2)
+    }
 
-  const activeUsers = users.filter((u) => u.isActive)
-  const inactiveUsers = users.filter((u) => !u.isActive)
+    const isCurrentUser = (userId: string) => {
+        const {user} = useAuth()
+        return userId === user?.id || userId === "current-user"
+    }
 
-  return (
-      <div
-          className={`flex flex-col elegant-card rounded-2xl overflow-hidden min-h-[55%] ${
-              showParticipants ? "w-80 bg-slate-900 border-l border-slate-700" : ""
-          }`}
-          style={{ height: "fit-content", maxHeight: "calc(100vh - 200px)" }}
-      >
-        <div className="border-b border-blue-200/50 dark:border-blue-800/50 p-4 flex-shrink-0">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-slate-900 dark:text-white flex items-center">
-              <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-              Live Chat
-            </h2>
-            <div className="flex items-center space-x-2">
-              <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 dark:text-blue-300">
-                {messages.length == 1 ? "1 message" : `${messages.length} messages`}
-              </Badge>
-              {unreadCount > 0 && (
-                  <Badge
-                      variant="destructive"
-                      className="bg-red-500 text-white cursor-pointer animate-pulse"
-                      onClick={scrollToBottom}
-                  >
-                    {unreadCount} new
-                  </Badge>
-              )}
-            </div>
-          </div>
+    const activeUsers = users.filter((u) => u.isActive)
+    const inactiveUsers = users.filter((u) => !u.isActive)
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600 dark:text-slate-400">Active ({activeUsers.length})</span>
-              {showParticipants && (
-                  <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowParticipants(false)}
-                      className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-3 w-3"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </Button>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {activeUsers.slice(0, showParticipants ? activeUsers.length : 5).map((user) => (
-                  <TooltipProvider key={user.id}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="relative">
-                          <Avatar className="h-6 w-6 border border-green-500/50">
-                            <AvatarImage src={user.avatar || "/placeholder.svg"} />
-                            <AvatarFallback className="text-xs bg-blue-600 text-white">
-                              {getInitials(user.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          {user.isOwner && <Crown className="absolute -top-1 -right-1 h-3 w-3 text-yellow-500" />}
-                          <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-white dark:border-slate-900"></div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>
-                          {user.name} {user.isOwner && "(Owner)"}
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-              ))}
-              {!showParticipants && activeUsers.length > 5 && (
-                  <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowParticipants(true)}
-                      className="h-6 w-6 p-0 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  >
-                    +{activeUsers.length - 5}
-                  </Button>
-              )}
-            </div>
-
-            {showParticipants && inactiveUsers.length > 0 && (
-                <>
-                  <Separator className="bg-blue-200/50 dark:bg-blue-800/50" />
-                  <div className="space-y-2">
-                    <span className="text-sm text-slate-600 dark:text-slate-400">Inactive ({inactiveUsers.length})</span>
-                    <div className="flex flex-wrap gap-1">
-                      {inactiveUsers.map((user) => (
-                          <TooltipProvider key={user.id}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="relative opacity-50">
-                                  <Avatar className="h-6 w-6 border border-gray-500/50">
-                                    <AvatarImage src={user.avatar || "/placeholder.svg"} />
-                                    <AvatarFallback className="text-xs bg-gray-600 text-white">
-                                      {getInitials(user.name)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-gray-500 rounded-full border border-white dark:border-slate-900"></div>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{user.name} (Inactive)</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                      ))}
+    return (
+        <div
+            className={`flex flex-col elegant-card rounded-2xl overflow-hidden min-h-[55%] ${
+                showParticipants ? "w-80 bg-slate-900 border-l border-slate-700" : ""
+            }`}
+            style={{height: "fit-content", maxHeight: "calc(100vh - 200px)"}}
+        >
+            <div className="border-b border-blue-200/50 dark:border-blue-800/50 p-4 flex-shrink-0">
+                <div className="flex items-center justify-between mb-3">
+                    <h2 className="font-semibold text-slate-900 dark:text-white flex items-center">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                        Live Chat
+                    </h2>
+                    <div className="flex items-center space-x-2">
+                        <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 dark:text-blue-300">
+                            {messages.length == 1 ? "1 message" : `${messages.length} messages`}
+                        </Badge>
+                        {unreadCount > 0 && (
+                            <Badge
+                                variant="destructive"
+                                className="bg-red-500 text-white cursor-pointer animate-pulse"
+                                onClick={scrollToBottom}
+                            >
+                                {unreadCount} new
+                            </Badge>
+                        )}
                     </div>
-                  </div>
-                </>
-            )}
-          </div>
-        </div>
+                </div>
 
-        <div className="flex-1 overflow-hidden" style={{ height: "400px" }}>
-          <ScrollArea className="h-full p-4">
-            <div ref={chatContainerRef} className="space-y-4">
-              {messages.length > 0 ? (
-                  messages.map((msg) => (
-                      <div
-                          key={msg.id}
-                          className={`flex ${isCurrentUser(msg.userId) ? "justify-end" : "justify-start"}`}
-                      >
-                        <div
-                            className={`flex max-w-[80%] ${
-                                isCurrentUser(msg.userId) ? "flex-row-reverse" : "flex-row"
-                            } items-start space-x-2`}
-                        >
-                          {!isCurrentUser(msg.userId) && (
-                              <Avatar className="h-8 w-8 flex-shrink-0">
-                                <AvatarImage src={msg.avatar || "/placeholder.svg"} />
-                                <AvatarFallback className="text-xs bg-blue-600 text-white">
-                                  {getInitials(msg.user)}
-                                </AvatarFallback>
-                              </Avatar>
-                          )}
-                          <div
-                              className={`rounded-2xl px-4 py-2 ${
-                                  isCurrentUser(msg.userId)
-                                      ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-br-md"
-                                      : "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-bl-md"
-                              }`}
-                          >
-                            <div className="flex items-center space-x-2 mb-1">
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <span
+                            className="text-sm text-slate-600 dark:text-slate-400">Active ({activeUsers.length})</span>
+                        {showParticipants && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowParticipants(false)}
+                                className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-3 w-3"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </Button>
+                        )}
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                        {activeUsers.slice(0, showParticipants ? activeUsers.length : 5).map((user) => (
+                            <TooltipProvider key={user.id}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="relative">
+                                            <Avatar className="h-6 w-6 border border-green-500/50">
+                                                <AvatarImage src={user.avatar || "/placeholder.svg"}/>
+                                                <AvatarFallback className="text-xs bg-blue-600 text-white">
+                                                    {getInitials(user.name)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            {user.isOwner &&
+                                                <Crown className="absolute -top-1 -right-1 h-3 w-3 text-yellow-500"/>}
+                                            <div
+                                                className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-white dark:border-slate-900"></div>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>
+                                            {user.name} {user.isOwner && "(Owner)"}
+                                        </p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        ))}
+                        {!showParticipants && activeUsers.length > 5 && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowParticipants(true)}
+                                className="h-6 w-6 p-0 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                            >
+                                +{activeUsers.length - 5}
+                            </Button>
+                        )}
+                    </div>
+
+                    {showParticipants && inactiveUsers.length > 0 && (
+                        <>
+                            <Separator className="bg-blue-200/50 dark:bg-blue-800/50"/>
+                            <div className="space-y-2">
+                                <span
+                                    className="text-sm text-slate-600 dark:text-slate-400">Inactive ({inactiveUsers.length})</span>
+                                <div className="flex flex-wrap gap-1">
+                                    {inactiveUsers.map((user) => (
+                                        <TooltipProvider key={user.id}>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <div className="relative opacity-50">
+                                                        <Avatar className="h-6 w-6 border border-gray-500/50">
+                                                            <AvatarImage src={user.avatar || "/placeholder.svg"}/>
+                                                            <AvatarFallback className="text-xs bg-gray-600 text-white">
+                                                                {getInitials(user.name)}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div
+                                                            className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-gray-500 rounded-full border border-white dark:border-slate-900"></div>
+                                                    </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>{user.name} (Inactive)</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    ))}
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-hidden" style={{height: "400px"}}>
+                <ScrollArea className="h-full p-4">
+                    <div ref={chatContainerRef} className="space-y-4">
+                        {messages.length > 0 ? (
+                            messages.map((msg) => (
+                                <div
+                                    key={msg.id}
+                                    className={`flex ${isCurrentUser(msg.userId) ? "justify-end" : "justify-start"}`}
+                                >
+                                    <div
+                                        className={`flex max-w-[80%] ${
+                                            isCurrentUser(msg.userId) ? "flex-row-reverse" : "flex-row"
+                                        } items-start space-x-2`}
+                                    >
+                                        {!isCurrentUser(msg.userId) && (
+                                            <Avatar className="h-8 w-8 flex-shrink-0">
+                                                <AvatarImage src={msg.avatar || "/placeholder.svg"}/>
+                                                <AvatarFallback className="text-xs bg-blue-600 text-white">
+                                                    {getInitials(msg.user)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                        )}
+                                        <div
+                                            className={`rounded-2xl px-4 py-2 ${
+                                                isCurrentUser(msg.userId)
+                                                    ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-br-md"
+                                                    : "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-bl-md"
+                                            }`}
+                                        >
+                                            <div className="flex items-center space-x-2 mb-1">
                         <span className="text-xs font-medium opacity-80">
                           {isCurrentUser(msg.userId) ? "You" : msg.user}
                         </span>
-                              <span className="text-xs opacity-60">{formatTime12Hour(msg.timestamp)}</span>
+                                                <span
+                                                    className="text-xs opacity-60">{formatTime12Hour(msg.timestamp)}</span>
+                                            </div>
+                                            <p className="text-sm leading-relaxed">{msg.text}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="flex h-32 items-center justify-center text-slate-600 dark:text-slate-400">
+                                <div className="text-center">
+                                    <div
+                                        className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                                        <Send className="h-6 w-6 text-blue-600 dark:text-blue-400"/>
+                                    </div>
+                                    <p>No messages yet</p>
+                                    <p className="text-xs">Start the conversation!</p>
+                                </div>
                             </div>
-                            <p className="text-sm leading-relaxed">{msg.text}</p>
-                          </div>
-                        </div>
-                      </div>
-                  ))
-              ) : (
-                  <div className="flex h-32 items-center justify-center text-slate-600 dark:text-slate-400">
-                    <div className="text-center">
-                      <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <Send className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <p>No messages yet</p>
-                      <p className="text-xs">Start the conversation!</p>
+                        )}
                     </div>
-                  </div>
-              )}
+                </ScrollArea>
             </div>
-          </ScrollArea>
-        </div>
 
-        <div className="border-t border-blue-200/50 dark:border-blue-800/50 p-4 flex-shrink-0">
-          <form onSubmit={handleSendMessage} className="flex space-x-2">
-            <Textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Type your message..."
-                className="min-h-[40px] flex-1 resize-none bg-white/50 dark:bg-slate-800/50 border-blue-200 dark:border-blue-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:border-blue-500"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault()
-                    e.currentTarget.form?.requestSubmit()
-                  }
-                }}
-            />
-            <Button
-                type="submit"
-                size="icon"
-                disabled={!message.trim()}
-                className="elegant-button bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white disabled:opacity-50"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </form>
+            <div className="border-t border-blue-200/50 dark:border-blue-800/50 p-4 flex-shrink-0">
+                <form onSubmit={handleSendMessage} className="flex space-x-2">
+                    <Textarea
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        placeholder="Type your message..."
+                        className="min-h-[40px] flex-1 resize-none bg-white/50 dark:bg-slate-800/50 border-blue-200 dark:border-blue-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:border-blue-500"
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault()
+                                e.currentTarget.form?.requestSubmit()
+                            }
+                        }}
+                    />
+                    <Button
+                        type="submit"
+                        size="icon"
+                        disabled={!message.trim()}
+                        className="elegant-button bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white disabled:opacity-50"
+                    >
+                        <Send className="h-4 w-4"/>
+                    </Button>
+                </form>
+            </div>
         </div>
-      </div>
-  )
+    )
 }
 
 export default function RoomPage() {
@@ -565,6 +566,7 @@ export default function RoomPage() {
     const videoRef = useRef<HTMLVideoElement>(null)
     const chatContainerRef = useRef<HTMLDivElement>(null)
     const videoContainerRef = useRef<HTMLDivElement>(null)
+    const fullscreenContainerRef = useRef<HTMLDivElement>(null)
     const controlsTimeoutRef = useRef<NodeJS.Timeout>()
 
     const speedOptions = [
@@ -781,13 +783,14 @@ export default function RoomPage() {
             return
         }
 
-        if (!videoContainerRef.current) {
+        if (!fullscreenContainerRef.current) {
             console.error("Video container ref is null")
             return
         }
 
         // Ensure the element is focusable and visible
-        const element = videoContainerRef.current
+        const element = fullscreenContainerRef.current
+        console.log("Video container ref:", element)
 
         // Make sure element is properly focused and interactable
         element.focus()
@@ -797,10 +800,10 @@ export default function RoomPage() {
 
         // Log browser capabilities
         console.log("Browser fullscreen support:", {
-            requestFullscreen: !!element.requestFullscreen,
-            webkitRequestFullscreen: !!(element as any).webkitRequestFullscreen,
-            mozRequestFullScreen: !!(element as any).mozRequestFullScreen,
-            msRequestFullscreen: !!(element as any).msRequestFullscreen,
+            requestFullscreen: element.requestFullscreen,
+            webkitRequestFullscreen: (element as any).webkitRequestFullscreen,
+            mozRequestFullScreen: (element as any).mozRequestFullScreen,
+            msRequestFullscreen: (element as any).msRequestFullscreen,
             fullscreenEnabled: document.fullscreenEnabled,
             webkitFullscreenEnabled: (document as any).webkitFullscreenEnabled,
         })
@@ -833,7 +836,7 @@ export default function RoomPage() {
                         .requestFullscreen({
                             navigationUI: "hide",
                         })
-                        .catch((error) => {
+                        .catch(() => {
                             console.log("Standard requestFullscreen failed, trying without options")
                             return element.requestFullscreen()
                         })
@@ -933,18 +936,6 @@ export default function RoomPage() {
     const handleDoubleClick = () => {
         console.log("Double-click detected, attempting fullscreen")
         toggleFullscreen()
-    }
-
-    // Add keyboard shortcut handler
-    const handleKeyPress = (e: KeyboardEvent) => {
-        if (e.key === "f" || e.key === "F") {
-            console.log("F key pressed, attempting fullscreen")
-            toggleFullscreen()
-        }
-        if (e.key === "Escape") {
-            console.log("Escape key pressed")
-            // Let browser handle escape naturally
-        }
     }
 
     // Handle fullscreen changes with cross-browser support
@@ -1349,162 +1340,162 @@ export default function RoomPage() {
 
                     <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
                         <div id="mid-section" className="flex flex-col space-y-4">
-                            {/* ----------- VIDEO PLAYER ROOT (ALWAYS RENDERED) ----------- */}
-                            <div
-                                ref={videoContainerRef}
-                                className={`
-              group relative overflow-hidden flex
-              ${isFullscreen
-                                    ? "fixed inset-0 z-50 bg-black flex-row"
-                                    : "aspect-video rounded-2xl bg-black shadow-2xl flex-shrink-0 flex-col"
-                                }
-              ${isTheaterMode && isFullscreen && showChatInFullscreen ? "flex-1" : ""}
-              flex-col
-              ${isFullscreen ? "" : ""}
-            `}
-                                style={{cursor: "pointer"}}
-                                onMouseMove={handleMouseMove}
-                                onMouseLeave={() => isPlaying && setShowControls(false)}
-                                onDoubleClick={handleDoubleClick}
-                                tabIndex={0}
-                                role="button"
-                                aria-label="Video player - double click or press F for fullscreen"
-                            >
-                                <video
-                                    ref={videoRef}
-                                    className="w-full h-full object-contain"
-                                    src={selectedVideoPath || undefined}
-                                    onTimeUpdate={() => {
-                                        const v = videoRef.current;
-                                        if (v) {
-                                            setCurrentTime(v.currentTime);
-                                            setDuration(v.duration || 100);
-                                        }
-                                    }}
-                                    onPlay={() => setIsPlaying(true)}
-                                    onPause={() => setIsPlaying(false)}
-                                    onError={(e) => {
-                                        const videoElement = e.target as HTMLVideoElement;
-                                        const error = videoElement.error;
-                                        console.error("Video element error:", {
-                                            message: error?.message,
-                                            code: error?.code,
-                                            src: videoElement.src,
-                                            networkState: videoElement.networkState,
-                                            readyState: videoElement.readyState,
-                                        });
-                                        setIsPlaying(false);
-                                    }}
-                                />
 
-                                {/* >> Chat Toggle (top-right, only in fullscreen) */}
-                                {isFullscreen && (
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={e => {
-                                            e.stopPropagation();
-                                            setShowChatInFullscreen(!showChatInFullscreen);
-                                        }}
-                                        className="absolute top-4 right-4 text-white hover:bg-white/20 bg-black/50 rounded-full p-2 z-10"
-                                    >
-                                        <MessageSquare className="h-5 w-5"/>
-                                    </Button>
-                                )}
-
-                                {/* >> Controls bar (always rendered, just styled) */}
-                                <div
-                                    className={`
-                absolute inset-x-0 bottom-0 
-                bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 
-                transition-opacity duration-300 
-                ${showControls ? "opacity-100" : "opacity-0"}
-              `}
+                            {/* VIDEO PLAYER ROOT (ALWAYS RENDERED) */}
+                            <div ref={fullscreenContainerRef}>
+                                <div ref={videoContainerRef}
+                                    className={`group relative overflow-hidden flex 
+                                        ${showChatInFullscreen ? 'max-w-[79%]' :''}
+                                            ${isFullscreen
+                                        ? "min-h-screen fixed inset-0 z-50 bg-black flex-row"
+                                        : "aspect-video rounded-2xl bg-black shadow-2xl flex-shrink-0 flex-col"
+                                    }
+                                            flex-col
+                                         `}
+                                    style={{cursor: "pointer"}}
+                                    onMouseMove={handleMouseMove}
+                                    onMouseLeave={() => isPlaying && setShowControls(false)}
+                                    onDoubleClick={handleDoubleClick}
+                                    tabIndex={0}
+                                    role="button"
+                                    aria-label="Video player - double click or press F for fullscreen"
                                 >
-                                    <div className="mb-4">
-                                        <Slider
-                                            value={[currentTime]}
-                                            min={0}
-                                            max={duration || 100}
-                                            step={0.1}
-                                            onValueChange={handleSeek}
-                                            className="w-full [&_[role=slider]]:bg-red-500 [&_[role=slider]]:border-red-500 [&_.bg-primary]:bg-red-500"
-                                        />
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-4">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={handlePlayPause}
-                                                className="text-white hover:bg-white/20"
-                                            >
-                                                {isPlaying ? <Pause className="h-6 w-6"/> : <Play className="h-6 w-6"/>}
-                                            </Button>
-                                            <div className="flex items-center space-x-2">
+                                    <video
+                                        ref={videoRef}
+                                        className="w-full h-full object-contain"
+                                        src={selectedVideoPath || undefined}
+                                        onTimeUpdate={() => {
+                                            const v = videoRef.current;
+                                            if (v) {
+                                                setCurrentTime(v.currentTime);
+                                                setDuration(v.duration || 100);
+                                            }
+                                        }}
+                                        onPlay={() => setIsPlaying(true)}
+                                        onPause={() => setIsPlaying(false)}
+                                        onError={(e) => {
+                                            const videoElement = e.target as HTMLVideoElement;
+                                            const error = videoElement.error;
+                                            console.error("Video element error:", {
+                                                message: error?.message,
+                                                code: error?.code,
+                                                src: videoElement.src,
+                                                networkState: videoElement.networkState,
+                                                readyState: videoElement.readyState,
+                                            });
+                                            setIsPlaying(false);
+                                        }}
+                                    />
+
+                                    {/* >> Chat Toggle (top-right, only in fullscreen) */}
+                                    {isFullscreen && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={e => {
+                                                e.stopPropagation();
+                                                setShowChatInFullscreen(!showChatInFullscreen);
+                                            }}
+                                            className={`absolute top-4 right-4 text-white hover:bg-white/20 bg-black/50 rounded-full p-2 z-10`}
+                                        >
+                                            <MessageSquare className="h-5 w-5"/>
+                                        </Button>
+                                    )}
+
+                                    {/* >> Controls bar (always rendered, just styled) */}
+                                    <div
+                                        className={`absolute inset-x-0 bottom-0 
+                                                bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 
+                                                transition-opacity duration-300 
+                                                ${showControls ? "opacity-100" : "opacity-0"}
+                                              `}
+                                    >
+                                        <div className="mb-4">
+                                            <Slider
+                                                value={[currentTime]}
+                                                min={0}
+                                                max={duration || 100}
+                                                step={0.1}
+                                                onValueChange={handleSeek}
+                                                className="w-full [&_[role=slider]]:bg-red-500 [&_[role=slider]]:border-red-500 [&_.bg-primary]:bg-red-500"
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center space-x-4">
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={handleMuteToggle}
+                                                    onClick={handlePlayPause}
                                                     className="text-white hover:bg-white/20"
                                                 >
-                                                    {isMuted ? <VolumeX className="h-5 w-5"/> :
-                                                        <Volume2 className="h-5 w-5"/>}
+                                                    {isPlaying ? <Pause className="h-6 w-6"/> :
+                                                        <Play className="h-6 w-6"/>}
                                                 </Button>
-                                                <div className="w-20">
-                                                    <Slider
-                                                        value={[volume]}
-                                                        min={0}
-                                                        max={100}
-                                                        step={1}
-                                                        onValueChange={handleVolumeChange}
-                                                        className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-white [&_.bg-primary]:bg-white"
-                                                    />
+                                                <div className="flex items-center space-x-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={handleMuteToggle}
+                                                        className="text-white hover:bg-white/20"
+                                                    >
+                                                        {isMuted ? <VolumeX className="h-5 w-5"/> :
+                                                            <Volume2 className="h-5 w-5"/>}
+                                                    </Button>
+                                                    <div className="w-20">
+                                                        <Slider
+                                                            value={[volume]}
+                                                            min={0}
+                                                            max={100}
+                                                            step={1}
+                                                            onValueChange={handleVolumeChange}
+                                                            className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-white [&_.bg-primary]:bg-white"
+                                                        />
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <span className="text-sm text-white font-mono">
+                                                <span className="text-sm text-white font-mono">
                     {formatTime(currentTime)} / {formatTime(duration)}
                   </span>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                            <div className="relative">
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <div className="relative">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+                                                        className="text-white hover:bg-white/20 text-xs"
+                                                    >
+                                                        <Settings className="h-4 w-4 mr-1"/>
+                                                        {playbackSpeed}x
+                                                    </Button>
+                                                    {showSpeedMenu && (
+                                                        <div
+                                                            className="absolute bottom-full right-0 mb-2 bg-black/90 rounded-lg p-2 min-w-[100px]">
+                                                            <div className="text-xs text-white mb-2 px-2">Speed</div>
+                                                            {speedOptions.map((option) => (
+                                                                <button
+                                                                    key={option.value}
+                                                                    onClick={() => handleSpeedChange(option.value)}
+                                                                    className={`block w-full text-left px-2 py-1 text-sm rounded hover:bg-white/20 ${playbackSpeed === option.value ? "text-red-500" : "text-white"}`}
+                                                                >
+                                                                    {option.label}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
                                                 <Button
                                                     variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-                                                    className="text-white hover:bg-white/20 text-xs"
+                                                    size="icon"
+                                                    onClick={toggleTheaterMode}
+                                                    className="text-white hover:bg-white/20"
                                                 >
-                                                    <Settings className="h-4 w-4 mr-1"/>
-                                                    {playbackSpeed}x
+                                                    {isTheaterMode ? <Maximize className="h-5 w-5"/> :
+                                                        <Minimize className="h-5 w-5"/>}
                                                 </Button>
-                                                {showSpeedMenu && (
-                                                    <div
-                                                        className="absolute bottom-full right-0 mb-2 bg-black/90 rounded-lg p-2 min-w-[100px]">
-                                                        <div className="text-xs text-white mb-2 px-2">Speed</div>
-                                                        {speedOptions.map((option) => (
-                                                            <button
-                                                                key={option.value}
-                                                                onClick={() => handleSpeedChange(option.value)}
-                                                                className={`block w-full text-left px-2 py-1 text-sm rounded hover:bg-white/20 ${playbackSpeed === option.value ? "text-red-500" : "text-white"}`}
-                                                            >
-                                                                {option.label}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
                                             </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={toggleTheaterMode}
-                                                className="text-white hover:bg-white/20"
-                                            >
-                                                {isTheaterMode ?  <Maximize className="h-5 w-5" /> : <Minimize className="h-5 w-5" /> }
-                                            </Button>
                                         </div>
                                     </div>
                                 </div>
-
                                 {/* >> CHAT PANEL (only in fullscreen + theater + showChatInFullscreen) */}
                                 {isFullscreen && showChatInFullscreen && (
                                     <div
@@ -1517,7 +1508,8 @@ export default function RoomPage() {
                                                     Live Chat
                                                 </h2>
                                                 <div className="flex items-center space-x-2">
-                                                    <Badge variant="secondary" className="bg-blue-500/20 text-blue-300">
+                                                    <Badge variant="secondary"
+                                                           className="bg-blue-500/20 text-blue-300">
                                                         {messages.length} messages
                                                     </Badge>
                                                     {unreadCount > 0 && (
@@ -1648,6 +1640,8 @@ export default function RoomPage() {
                                 )}
                                 {/* END: Chat panel */}
                             </div>
+
+
                             {/* END: Unified Video Player Root */}
 
                             <VideoList
