@@ -892,6 +892,7 @@ export default function RoomPage() {
                     console.log("Exit fullscreen request completed successfully")
                 }
             }
+            setShowChatInFullscreen(false);
         } catch (error) {
             console.error("Fullscreen API error:", error)
 
@@ -1270,6 +1271,7 @@ export default function RoomPage() {
     const toggleTheaterMode = () => {
         toggleFullscreen()
         if (!isFullscreen) {
+            setShowChatInFullscreen(false)
             setIsTheaterMode(false)
         } else {
             setIsTheaterMode(!isTheaterMode)
