@@ -37,6 +37,7 @@ import {ScrollArea} from "@/components/ui/scroll-area"
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip"
 import {io, type Socket} from "socket.io-client"
 import type {DefaultEventsMap} from "@socket.io/component-emitter"
+import {useRoom} from "@/components/room-provider";
 
 interface User {
     id: string
@@ -64,6 +65,7 @@ interface VideoItem {
 
 interface RoomHeaderProps {
     id: string
+    roomName: string
     users: User[]
     showParticipants: boolean
     setShowParticipants: React.Dispatch<React.SetStateAction<boolean>>
@@ -98,7 +100,7 @@ interface ChatBoxProps {
 }
 
 const RoomHeader: React.FC<RoomHeaderProps> = ({
-                                                   id, users, showParticipants, setShowParticipants,
+                                                   roomName, id, users, showParticipants, setShowParticipants,
                                                    handleCopyRoomCode, handleShareRoom, copied
                                                }) => {
     return (
@@ -107,7 +109,7 @@ const RoomHeader: React.FC<RoomHeaderProps> = ({
                 <div className="flex items-center space-x-4">
                     <div className="flex items-center space-x-2">
                         <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div>
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Room</h1>
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{roomName}</h1>
                     </div>
                     <div className="flex items-center space-x-2 elegant-card rounded-lg px-3 py-1">
                         <span className="text-sm text-slate-600 dark:text-slate-300">Code:</span>
@@ -541,6 +543,7 @@ export default function RoomPage() {
     const {id} = useParams()
     const {user} = useAuth()
     const [isUploading, setIsUploading] = useState(false)
+    const { selectedRoom } = useRoom()
     const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null)
     const [selectedVideoId, setSelectedVideoId] = useState<string | null>("")
     const [videoFile, setVideoFile] = useState<File | null>(null)
@@ -1331,6 +1334,7 @@ export default function RoomPage() {
 
                 <div className="container mx-auto grid min-h-screen grid-rows-[auto_1fr] gap-6 p-4 relative z-10">
                     <RoomHeader
+                        roomName={selectedRoom == null ? "Room" : selectedRoom.name}
                         id={id as string}
                         users={users}
                         showParticipants={showParticipants}
