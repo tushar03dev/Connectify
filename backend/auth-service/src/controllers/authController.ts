@@ -25,46 +25,47 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
         }
 
         // Send OTP
-        const otpToken = await sendOTP(email);
+        const otp = await sendOTP(email);
 
         // Store user temporarily in Redis using the OTP token as key
-        const tempUserData = JSON.stringify({ name, email, password });
+        const tempUserData = JSON.stringify({ name, password });
         const redisClient = getRedisClient();
-        await redisClient.setEx(`signup:${otpToken}`, 300, tempUserData); // Expires in 5 minutes
+        await redisClient.setEx(`otp:${email}`, 300, otp);
+        await redisClient.setEx(`signup:${email}`, 300, tempUserData); // Expires in 5 minutes
 
-        return res.status(200).json({success: true, otpToken, message: 'OTP sent to your email. Please enter the OTP to complete sign-up.' });
+        return res.status(200).json({success: true, message: 'OTP sent to your email. Please enter the OTP to complete sign-up.' });
     } catch (err) {
         next(err);
     }
 };
 
 export const completeSignUp = async (req: Request, res: Response, next: NextFunction) => {
-    const { otpToken, otp } = req.body;
+    const { email, otp } = req.body;
 
-    if (!otpToken || !otp) {
-        res.status(400).json({ message: 'Token and OTP are required.' });
+    if (!email || !otp) {
+        res.status(400).json({ message: 'Email and OTP are required.' });
         return;
     }
 
     try {
-        const otpVerificationResult = await verifyOTP(otpToken, otp);
+        const otpVerificationResult = await verifyOTP(email, otp);
 
         // If OTP verification was successful, proceed with account creation
         if (otpVerificationResult.success) {
             const redisClient = getRedisClient();
-            const userDataStr = await redisClient.get(`signup:${otpToken}`);
+            const userDataStr = await redisClient.get(`signup:${email}`);
             if (!userDataStr) {
                 return res.status(400).json({ message: 'No user data found or token expired.' });
             }
 
-            const { name, email, password } = JSON.parse(userDataStr);
+            const { name, password } = JSON.parse(userDataStr);
 
             // Generate JWT token
             const token = jwt.sign({ email: email }, process.env.JWT_SECRET as string, { expiresIn: "1d" });
 
             await publishToQueue("authQueue", { name, email, password });
 
-            await redisClient.del(`signup:${otpToken}`); // Clean up Redis entry
+            await redisClient.del(`signup:${email}`); // Clean up Redis entry
 
             // Respond with token and success message
             res.status(201).json({success: true, token, message: 'User signed up successfully.' });
