@@ -6,32 +6,42 @@ import dotenv from 'dotenv';
 import {passwordResetMail, sendOTP} from "./otpController";
 import {publishToQueue} from "../config/rabbitmq";
 import {getRedisClient} from '../config/redis';
+import {signUpPayload} from "../types";
 
 const env = process.env.NODE_ENV;
 dotenv.config({path: `.env.${env}`});
 
-export const signUp = async (req: Request, res: Response, next: NextFunction) => {
-    const {name, email, password} = req.body;
+type signUpInterface = {
+    email: string;
+    password: string;
+    name: string;
+}
 
-    // Check if all required fields are present
-    if (!name || !email || !password) {
-        return res.status(400).json({message: 'email and password are required.'});
+export const signUp = async (req: Request, res: Response, next: NextFunction) => {
+    const createPayload: signUpInterface = req.body;
+    const parsedPayload = signUpPayload.safeParse(createPayload);
+
+    if(!parsedPayload.success) {
+        res.status(411).send({
+            msg: "You sent the wrong inputs"
+        })
+        return;
     }
 
     try {
-        const existingUser = await User.findOne({email});
+        const existingUser = await User.findOne({email: createPayload.email});
         if (existingUser) {
             return res.status(400).send('User already exists.');
         }
 
         // Send OTP
-        const otp = await sendOTP(email);
+        const otp = await sendOTP(createPayload.email);
 
         // Store user temporarily in Redis using the OTP token as key
-        const tempUserData = JSON.stringify({name, password});
+        const tempUserData = JSON.stringify({name: createPayload.name, password: createPayload.password});
         const redisClient = getRedisClient();
-        await redisClient.setEx(`otp:${email}`, 300, otp);
-        await redisClient.setEx(`signup:${email}`, 300, tempUserData); // Expires in 5 minutes
+        await redisClient.setEx(`otp:${createPayload.email}`, 300, otp);
+        await redisClient.setEx(`signup:${createPayload.email}`, 300, tempUserData); // Expires in 5 minutes
 
         return res.status(200).json({
             success: true,

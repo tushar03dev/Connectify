@@ -330,7 +330,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
     return (
         <div
-            className={`flex flex-col elegant-card rounded-2xl overflow-hidden min-h-[55%] ${
+            className={`flex flex-col elegant-card rounded-2xl overflow-hidden min-h-[50%] ${
                 showParticipants ? "w-80 bg-slate-900 border-l border-slate-700" : ""
             }`}
             style={{height: "fit-content", maxHeight: "calc(100vh - 200px)"}}
@@ -543,7 +543,7 @@ export default function RoomPage() {
     const {id} = useParams()
     const {user} = useAuth()
     const [isUploading, setIsUploading] = useState(false)
-    const { selectedRoom } = useRoom()
+    const {selectedRoom} = useRoom()
     const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null)
     const [selectedVideoId, setSelectedVideoId] = useState<string | null>("")
     const [videoFile, setVideoFile] = useState<File | null>(null)
@@ -1350,21 +1350,21 @@ export default function RoomPage() {
                             {/* VIDEO PLAYER ROOT (ALWAYS RENDERED) */}
                             <div ref={fullscreenContainerRef}>
                                 <div ref={videoContainerRef}
-                                    className={`group relative overflow-hidden flex 
-                                        ${showChatInFullscreen ? 'max-w-[79%]' :''}
+                                     className={`group relative overflow-hidden flex 
+                                        ${showChatInFullscreen ? 'max-w-[79%]' : ''}
                                             ${isFullscreen
-                                        ? "min-h-screen fixed inset-0 z-50 bg-black flex-row"
-                                        : "aspect-video rounded-2xl bg-black shadow-2xl flex-shrink-0 flex-col"
-                                    }
+                                         ? "min-h-screen fixed inset-0 z-50 bg-black flex-row"
+                                         : "aspect-video rounded-2xl bg-black shadow-2xl flex-shrink-0 flex-col"
+                                     }
                                             flex-col
                                          `}
-                                    style={{cursor: "pointer"}}
-                                    onMouseMove={handleMouseMove}
-                                    onMouseLeave={() => isPlaying && setShowControls(false)}
-                                    onDoubleClick={handleDoubleClick}
-                                    tabIndex={0}
-                                    role="button"
-                                    aria-label="Video player - double click or press F for fullscreen"
+                                     style={{cursor: "pointer"}}
+                                     onMouseMove={handleMouseMove}
+                                     onMouseLeave={() => isPlaying && setShowControls(false)}
+                                     onDoubleClick={handleDoubleClick}
+                                     tabIndex={0}
+                                     role="button"
+                                     aria-label="Video player - double click or press F for fullscreen"
                                 >
                                     <video
                                         ref={videoRef}
