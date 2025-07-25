@@ -7,24 +7,17 @@ import {passwordResetMail, sendOTP} from "./otpController";
 import {publishToQueue} from "../config/rabbitmq";
 import {getRedisClient} from '../config/redis';
 import {signUpPayload} from "../types";
+import {completeSignUpPayload} from "../types/completeSignup";
 
 const env = process.env.NODE_ENV;
 dotenv.config({path: `.env.${env}`});
 
-type signUpInterface = {
-    email: string;
-    password: string;
-    name: string;
-}
-
 export const signUp = async (req: Request, res: Response, next: NextFunction) => {
-    const createPayload: signUpInterface = req.body;
+    const createPayload = req.body;
     const parsedPayload = signUpPayload.safeParse(createPayload);
 
     if(!parsedPayload.success) {
-        res.status(411).send({
-            msg: "You sent the wrong inputs"
-        })
+        res.status(400).json({ message: "Invalid input", issues: parsedPayload.error.errors });
         return;
     }
 
@@ -53,19 +46,19 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 export const completeSignUp = async (req: Request, res: Response, next: NextFunction) => {
-    const {email, otp} = req.body;
-    if (!email || !otp) {
-        res.status(400).json({message: 'Email and OTP are required.'});
-        return;
+    const createPayload = req.body;
+    const parsedPayload = completeSignUpPayload.safeParse(req.body);
+    if (parsedPayload.success) {
+        return res.status(400).json({ message: "Invalid input", issues: parsedPayload.error.errors });
     }
 
     try {
         const redisClient = getRedisClient();
-        const savedOtp = await redisClient.get(`otp:${email}`);
+        const savedOtp = await redisClient.get(`otp:${createPayload.email}`);
 
-        if (savedOtp && otp === savedOtp) {
+        if (savedOtp && createPayload.otp === savedOtp) {
 
-            const userDataStr = await redisClient.get(`signup:${email}`);
+            const userDataStr = await redisClient.get(`signup:${createPayload.email}`);
             if (!userDataStr) {
                 return res.status(400).json({message: 'No user data found or token expired.'});
             }
@@ -73,11 +66,11 @@ export const completeSignUp = async (req: Request, res: Response, next: NextFunc
             const {name, password} = JSON.parse(userDataStr);
 
             // Generate JWT token
-            const token = jwt.sign({email: email}, process.env.JWT_SECRET as string, {expiresIn: "1d"});
+            const token = jwt.sign({email: createPayload.email}, process.env.JWT_SECRET as string, {expiresIn: "1d"});
 
-            await publishToQueue("authQueue", {name, email, password});
+            await publishToQueue("authQueue", {name, email: createPayload.email, password});
 
-            await redisClient.del([`signup:${email}`, `otp:${email}`]); // Clean up Redis entry
+            await redisClient.del([`signup:${createPayload.email}`, `otp:${createPayload.email}`]); // Clean up Redis entry
 
             // Respond with token and success message
             res.status(201).json({success: true, token, message: 'User signed up successfully.'});
