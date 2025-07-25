@@ -6,8 +6,9 @@ import dotenv from 'dotenv';
 import {passwordResetMail, sendOTP} from "./otpController";
 import {publishToQueue} from "../config/rabbitmq";
 import {getRedisClient} from '../config/redis';
-import {signUpPayload} from "../types";
+import {emailOnlyPayload, signUpPayload} from "../types";
 import {completeSignUpPayload} from "../types/completeSignup";
+import {signInPayload} from "../types/signIn";
 
 const env = process.env.NODE_ENV;
 dotenv.config({path: `.env.${env}`});
@@ -84,15 +85,20 @@ export const completeSignUp = async (req: Request, res: Response, next: NextFunc
 };
 
 export const signIn = async (req: Request, res: Response, next: NextFunction) => {
-    const {email, password} = req.body;
+    const createPayload = req.body;
+    const parsedPayload = signInPayload.safeParse(createPayload);
+    if (parsedPayload.success) {
+        res.status(400).json({ message: "Invalid input", issues: parsedPayload.error.errors });
+        return;
+    }
     try {
-        const user = await User.findOne({email});
+        const user = await User.findOne({email: createPayload.email});
         if (!user) {
             res.status(400).send('User does not exist.');
             return;
         }
 
-        const isMatch = await bcrypt.compare(password, user.password);
+        const isMatch = await bcrypt.compare(createPayload.password, user.password);
         if (!isMatch) {
             res.status(400).send('Invalid password');
             return;
@@ -108,17 +114,22 @@ export const signIn = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 export const passwordReset = async (req: Request, res: Response, next: NextFunction) => {
-    const {email} = req.body;
+    const createPayload = req.body;
+    const parsedPayload = emailOnlyPayload.safeParse(createPayload);
+    if (parsedPayload.success) {
+        res.status(400).json({ message: "Invalid email", issues: parsedPayload.error.errors });
+        return;
+    }
     try {
 
-        const user = await User.find({email: email});
+        const user = await User.find({email: createPayload.email});
         if (!user) {
             res.status(400).json({msg: 'User does not exist.'});
         }
 
-        const otp = await passwordResetMail(email);
+        const otp = await passwordResetMail(createPayload.email);
         const redisClient = getRedisClient();
-        await redisClient.setEx(`otp:${email}`, 300, otp);
+        await redisClient.setEx(`otp:${createPayload.email}`, 300, otp);
 
         res.status(201).json({success: true, msg: 'Otp verification mail sent.'});
 
