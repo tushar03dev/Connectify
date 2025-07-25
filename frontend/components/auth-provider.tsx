@@ -21,9 +21,9 @@ type AuthContextType = {
   signup: (name: string, email: string, password: string) => Promise<boolean>
   logout: () => void
   isLoading: boolean
-  verifyOtp: (otp: string) => Promise<boolean>
+  verifyOtp: (email: string, otp: string) => Promise<boolean>
   requestOtp: (email: string) => Promise<boolean>
-  verifyOtpAndReset: (email: string, password: string, otp: string, otpToken: string) => Promise<boolean>
+  verifyOtpAndReset: (email: string, password: string, otp: string) => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -100,11 +100,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const verifyOtp = async (otp: string) => {
+  const verifyOtp = async (email:string, otp: string) => {
     try {
 
-      const response = await axios.post(`${API_BASE_URL}/auth/verify`, { otp });
+      const response = await axios.post(`${API_BASE_URL}/auth/verify`, { email, otp });
       if (response.data) {
+
+        localStorage.setItem('token', response.data.token);
 
         // Mock user data
         const userData = {
@@ -142,10 +144,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const verifyOtpAndReset = async (email: string, password: string, otp:string, otpToken:string) => {
+  const verifyOtpAndReset = async (email: string, password: string, otp:string) => {
    try {
-     const response = await axios.post(`${API_BASE_URL}/auth/change-password`, {email, password, otp, otpToken});
-     if (response.data) {
+     const response = await axios.post(`${API_BASE_URL}/auth/change-password`, {email, password, otp});
+     if (response.data.success) {
        return true
      } else {
        return false

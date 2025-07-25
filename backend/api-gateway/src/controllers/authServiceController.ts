@@ -26,7 +26,7 @@ export async function signUpRequestToAuthService(req: Request, res: Response) {
         console.log(name, email, password);
         const response = await axios.post(`${AUTH_SERVICE_URL}/auth/sign-up`, {name, email, password});
         if (response.data.success) {
-            res.status(200).json({otpToken: response.data.otpToken, message: response.data.message});
+            res.status(200).json({success: true, message: response.data.message});
         } else {
             res.status(500).json({success: false, error: "Failed to send message."});
         }
@@ -37,8 +37,8 @@ export async function signUpRequestToAuthService(req: Request, res: Response) {
 
 export async function otpVerificationRequestToAuthService(req: Request, res: Response) {
     try {
-        const {otp} = req.body;
-        const response = await axios.post(`${AUTH_SERVICE_URL}/otp/verify`, {otp});
+        const {email,otp} = req.body;
+        const response = await axios.post(`${AUTH_SERVICE_URL}/otp/verify`, {email, otp});
         if (response.data.success) {
             res.status(200).json({token: response.data.token, message: response.data.message});
         } else {
@@ -54,7 +54,7 @@ export async function passwordResetRequestToAuthService(req: Request, res: Respo
         const { email } = req.body;
         const response = await axios.post(`${AUTH_SERVICE_URL}/auth/password-reset`,{email})
         if (response.data.success) {
-            res.status(200).json({message: response.data.msg});
+            res.status(200).json({success: true, message: response.data.msg});
         } else {
             res.status(500).json({success: false, error: "Failed to send message."});
         }

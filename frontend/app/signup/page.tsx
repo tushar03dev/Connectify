@@ -68,7 +68,7 @@ export default function SignupPage() {
   }
 
   const handleOtpVerify = async () => {
-    const verified = await verifyOtp(otp);
+    const verified = await verifyOtp(email,otp);
     if (verified) {
       alert("Account created successfully!");
       // Redirect to dashboard or another page
