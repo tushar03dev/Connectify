@@ -11,6 +11,7 @@ import {completeSignUpPayload} from "../types/completeSignup";
 import {signInPayload} from "../types/signIn";
 import {emailOnlyPayload} from "../types/passwordReset";
 import {changePasswordPayload} from "../types/changePassword";
+import zod from "zod";
 
 const env = process.env.NODE_ENV;
 dotenv.config({path: `.env.${env}`});
@@ -20,7 +21,8 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
     const parsedPayload = signUpPayload.safeParse(createPayload);
 
     if(!parsedPayload.success) {
-        res.status(400).json({ message: "Invalid input", issues: parsedPayload.error.errors });
+        const errorTree = zod.treeifyError(parsedPayload.error);
+        res.status(400).json({ message: "Invalid input", errors: errorTree });
         return;
     }
 
@@ -51,8 +53,11 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
 export const completeSignUp = async (req: Request, res: Response, next: NextFunction) => {
     const createPayload = req.body;
     const parsedPayload = completeSignUpPayload.safeParse(req.body);
-    if (parsedPayload.success) {
-        return res.status(400).json({ message: "Invalid input", issues: parsedPayload.error.errors });
+
+    if(!parsedPayload.success) {
+        const errorTree = zod.treeifyError(parsedPayload.error);
+        res.status(400).json({ message: "Invalid input", errors: errorTree });
+        return;
     }
 
     try {
@@ -89,10 +94,13 @@ export const completeSignUp = async (req: Request, res: Response, next: NextFunc
 export const signIn = async (req: Request, res: Response, next: NextFunction) => {
     const createPayload = req.body;
     const parsedPayload = signInPayload.safeParse(createPayload);
-    if (parsedPayload.success) {
-        res.status(400).json({ message: "Invalid input", issues: parsedPayload.error.errors });
+
+    if(!parsedPayload.success) {
+        const errorTree = zod.treeifyError(parsedPayload.error);
+        res.status(400).json({ message: "Invalid input", errors: errorTree });
         return;
     }
+
     try {
         const user = await User.findOne({email: createPayload.email});
         if (!user) {
@@ -118,10 +126,13 @@ export const signIn = async (req: Request, res: Response, next: NextFunction) =>
 export const passwordReset = async (req: Request, res: Response, next: NextFunction) => {
     const createPayload = req.body;
     const parsedPayload = emailOnlyPayload.safeParse(createPayload);
-    if (parsedPayload.success) {
-        res.status(400).json({ message: "Invalid email", issues: parsedPayload.error.errors });
+
+    if(!parsedPayload.success) {
+        const errorTree = zod.treeifyError(parsedPayload.error);
+        res.status(400).json({ message: "Invalid input", errors: errorTree });
         return;
     }
+
     try {
 
         const user = await User.find({email: createPayload.email});
@@ -143,8 +154,10 @@ export const passwordReset = async (req: Request, res: Response, next: NextFunct
 export const changePassword = async (req: Request, res: Response, next: NextFunction) => {
     const createPayload = req.body;
     const parsedPayload = changePasswordPayload.safeParse(createPayload);
-    if (parsedPayload.success) {
-        res.status(400).json({ message: "Invalid input", issues: parsedPayload.error.errors });
+
+    if(!parsedPayload.success) {
+        const errorTree = zod.treeifyError(parsedPayload.error);
+        res.status(400).json({ message: "Invalid input", errors: errorTree });
         return;
     }
 
