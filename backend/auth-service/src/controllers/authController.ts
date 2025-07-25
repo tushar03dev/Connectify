@@ -6,9 +6,11 @@ import dotenv from 'dotenv';
 import {passwordResetMail, sendOTP} from "./otpController";
 import {publishToQueue} from "../config/rabbitmq";
 import {getRedisClient} from '../config/redis';
-import {emailOnlyPayload, signUpPayload} from "../types";
+import {signUpPayload} from "../types/signUp";
 import {completeSignUpPayload} from "../types/completeSignup";
 import {signInPayload} from "../types/signIn";
+import {emailOnlyPayload} from "../types/passwordReset";
+import {changePasswordPayload} from "../types/changePassword";
 
 const env = process.env.NODE_ENV;
 dotenv.config({path: `.env.${env}`});
@@ -139,28 +141,30 @@ export const passwordReset = async (req: Request, res: Response, next: NextFunct
 }
 
 export const changePassword = async (req: Request, res: Response, next: NextFunction) => {
-    const {email, password, otp} = req.body;
-    if (!email || !password || !otp) {
-        res.status(400).send('All fields are required.');
+    const createPayload = req.body;
+    const parsedPayload = changePasswordPayload.safeParse(createPayload);
+    if (parsedPayload.success) {
+        res.status(400).json({ message: "Invalid input", issues: parsedPayload.error.errors });
+        return;
     }
 
     try {
         const redisClient = getRedisClient();
-        const savedOtp = await redisClient.get(`otp:${email}`);
+        const savedOtp = await redisClient.get(`otp:${createPayload.email}`);
 
-        if (savedOtp && otp === savedOtp) {
-            const user = await User.find({email: email});
+        if (savedOtp && createPayload.otp === savedOtp) {
+            const user = await User.find({email: createPayload.email});
             if (!user) {
                 res.status(400).json({msg: 'User does not exist.'});
             }
 
-            const hashedPassword = await bcrypt.hash(password, 10);
+            const hashedPassword = await bcrypt.hash(createPayload.password, 10);
             if (!hashedPassword) {
                 res.status(400).send('Invalid password');
             }
 
-            await User.updateOne({email: email}, {password: hashedPassword});
-            await redisClient.del(`otp:${email}`);
+            await User.updateOne({email: createPayload.email}, {password: hashedPassword});
+            await redisClient.del(`otp:${createPayload.email}`);
             
             res.status(200).json({success: true, msg: 'Password updated'});
         } else {

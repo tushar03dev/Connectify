@@ -15,7 +15,6 @@ export const signUpPayload = zod.object({
         .string()
         .min(1, { message: 'Name is required' }), // or .nonempty({ message: 'Name is required' })
 
-
     email: zod
         .string()
         .min(1, { message: 'Email is required' }), // Then checks if it's a valid email format
