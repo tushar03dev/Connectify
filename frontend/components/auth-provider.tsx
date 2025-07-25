@@ -21,7 +21,7 @@ type AuthContextType = {
   signup: (name: string, email: string, password: string) => Promise<boolean>
   logout: () => void
   isLoading: boolean
-  verifyOtp: (otpToken: string, otp: string) => Promise<boolean>
+  verifyOtp: (otp: string) => Promise<boolean>
   requestOtp: (email: string) => Promise<boolean>
   verifyOtpAndReset: (email: string, password: string, otp: string, otpToken: string) => Promise<boolean>
 }
@@ -86,11 +86,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const response = await axios.post(`${API_BASE_URL}/auth/sign-up`, {name, email, password });
 
-      if (response.data.otpToken) {
+      if (response.data.success) {
         // Temporarily store user data
         tempUser = { name, email};
-
-        localStorage.setItem("otpToken", response.data.otpToken)
         return true
       } else {
         console.error('Signup failed. Please try again.');
@@ -102,12 +100,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const verifyOtp = async (otpToken: string, otp: string) => {
+  const verifyOtp = async (otp: string) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/verify`, {otpToken, otp });
 
+      const response = await axios.post(`${API_BASE_URL}/auth/verify`, { otp });
       if (response.data) {
-        localStorage.setItem('token', JSON.stringify(response.data.token));
 
         // Mock user data
         const userData = {

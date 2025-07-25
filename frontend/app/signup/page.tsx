@@ -24,7 +24,7 @@ export default function SignupPage() {
   const [otp, setOtp] = useState("")
   const [otpToken, setOtpToken] = useState('');
   const router = useRouter()
-  const [errors, setErrors] = useState({ password: ''});
+  const [errors, setErrors] = useState({ password: '' });
 
 
   const validatePassword = (pwd : string) => {
@@ -68,8 +68,7 @@ export default function SignupPage() {
   }
 
   const handleOtpVerify = async () => {
-    const otpToken = JSON.parse(localStorage.getItem("otpToken") || "");
-    const verified = await verifyOtp(otpToken, otp);
+    const verified = await verifyOtp(otp);
     if (verified) {
       alert("Account created successfully!");
       // Redirect to dashboard or another page
