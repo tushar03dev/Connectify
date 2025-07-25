@@ -41,18 +41,17 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
 
 export const completeSignUp = async (req: Request, res: Response, next: NextFunction) => {
     const { email, otp } = req.body;
-
     if (!email || !otp) {
         res.status(400).json({ message: 'Email and OTP are required.' });
         return;
     }
 
     try {
-        const otpVerificationResult = await verifyOTP(email, otp);
+        const redisClient = getRedisClient();
+        const savedOtp = await redisClient.get(`otp:${email}`);
 
-        // If OTP verification was successful, proceed with account creation
-        if (otpVerificationResult.success) {
-            const redisClient = getRedisClient();
+        if (savedOtp && otp === savedOtp) {
+
             const userDataStr = await redisClient.get(`signup:${email}`);
             if (!userDataStr) {
                 return res.status(400).json({ message: 'No user data found or token expired.' });
@@ -65,13 +64,13 @@ export const completeSignUp = async (req: Request, res: Response, next: NextFunc
 
             await publishToQueue("authQueue", { name, email, password });
 
-            await redisClient.del(`signup:${email}`); // Clean up Redis entry
+            await redisClient.del([`signup:${email}`, `otp:${email}`]); // Clean up Redis entry
 
             // Respond with token and success message
             res.status(201).json({success: true, token, message: 'User signed up successfully.' });
         } else {
             // OTP verification failed
-            res.status(400).json({ message: otpVerificationResult.message });
+            res.status(400).json({ message: 'Invalid or expired otp' });
         }
     } catch (err) {
         next(err);
