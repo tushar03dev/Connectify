@@ -24,11 +24,28 @@ export default function SignupPage() {
   const [otp, setOtp] = useState("")
   const [otpToken, setOtpToken] = useState('');
   const router = useRouter()
+  const [errors, setErrors] = useState({ password: ''});
+
+
+  const validatePassword = (pwd : string) => {
+    if (pwd.length < 8) return 'Password must be at least 8 characters.';
+    if (!/[A-Z]/.test(pwd)) return 'Password must include at least one uppercase letter.';
+    if (!/[a-z]/.test(pwd)) return 'Password must include at least one lowercase letter.';
+    if (!/[0-9]/.test(pwd)) return 'Password must include at least one number.';
+    if (!/[^A-Za-z0-9]/.test(pwd)) return 'Password must include at least one special character.';
+    return ''; // No error
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
+
+    const pwdError = validatePassword(password);
+    if (pwdError) {
+      setErrors({ password: pwdError });
+      return; // Don't submit
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match")
@@ -85,6 +102,7 @@ export default function SignupPage() {
                 onChange={(e) => setName(e.target.value)}
                 required
               />
+
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -93,7 +111,7 @@ export default function SignupPage() {
                 type="email"
                 placeholder="name@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value.trim())}
                 required
               />
             </div>
@@ -103,9 +121,14 @@ export default function SignupPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value.trim();
+                  setPassword(value);
+                  setErrors({ ...errors, password: validatePassword(value)})
+                }}
                 required
               />
+              {errors.password && <span style={{ color: 'red' }}>{errors.password}</span>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirm-password">Confirm Password</Label>
@@ -113,7 +136,7 @@ export default function SignupPage() {
                 id="confirm-password"
                 type="password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => setConfirmPassword(e.target.value.trim())}
                 required
               />
             </div>
@@ -132,7 +155,7 @@ export default function SignupPage() {
                         type="text"
                         placeholder="Enter OTP"
                         value={otp}
-                        onChange={(e) => setOtp(e.target.value)}
+                        onChange={(e) => setOtp(e.target.value.trim())}
                     />
                   </div>
                   <Button type="button" className="w-full" onClick={handleOtpVerify}>
