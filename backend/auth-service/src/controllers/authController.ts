@@ -22,7 +22,7 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
 
     if(!parsedPayload.success) {
         const errorTree = zod.treeifyError(parsedPayload.error);
-        res.status(400).json({ message: "Invalid input", errors: errorTree });
+        res.status(401).json({ message: "Invalid input", errors: errorTree });
         return;
     }
 
@@ -56,7 +56,7 @@ export const completeSignUp = async (req: Request, res: Response, next: NextFunc
 
     if(!parsedPayload.success) {
         const errorTree = zod.treeifyError(parsedPayload.error);
-        res.status(400).json({ message: "Invalid input", errors: errorTree });
+        res.status(401).json({ message: "Invalid input", errors: errorTree });
         return;
     }
 
@@ -97,7 +97,7 @@ export const signIn = async (req: Request, res: Response, next: NextFunction) =>
 
     if(!parsedPayload.success) {
         const errorTree = zod.treeifyError(parsedPayload.error);
-        res.status(400).json({ message: "Invalid input", errors: errorTree });
+        res.status(401).json({ message: "Invalid input", errors: errorTree });
         return;
     }
 
@@ -129,7 +129,7 @@ export const passwordReset = async (req: Request, res: Response, next: NextFunct
 
     if(!parsedPayload.success) {
         const errorTree = zod.treeifyError(parsedPayload.error);
-        res.status(400).json({ message: "Invalid input", errors: errorTree });
+        res.status(401).json({ message: "Invalid input", errors: errorTree });
         return;
     }
 
@@ -157,7 +157,7 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
 
     if(!parsedPayload.success) {
         const errorTree = zod.treeifyError(parsedPayload.error);
-        res.status(400).json({ message: "Invalid input", errors: errorTree });
+        res.status(401).json({ message: "Invalid input", errors: errorTree });
         return;
     }
 

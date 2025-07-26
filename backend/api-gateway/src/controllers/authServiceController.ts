@@ -12,7 +12,11 @@ export async function signInRequestToAuthService(req: Request, res: Response) {
         const response = await axios.post(`${AUTH_SERVICE_URL}/auth/sign-in`, {email, password});
         if (response.data.success) {
             res.status(200).json({ token: response.data.token, name:response.data.name, message: response.data.message });
-        } else {
+        }
+        else if(response.status === 401) {
+            res.status(401).json({success: false, error: response.data.errors});
+        }
+        else {
             res.status(500).json({success: false, error: "Failed to send message."});
         }
     } catch (error) {
@@ -27,7 +31,11 @@ export async function signUpRequestToAuthService(req: Request, res: Response) {
         const response = await axios.post(`${AUTH_SERVICE_URL}/auth/sign-up`, {name, email, password});
         if (response.data.success) {
             res.status(200).json({success: true, message: response.data.message});
-        } else {
+        }
+        else if(response.status === 401) {
+            res.status(401).json({success: false, error: response.data.errors});
+        }
+        else {
             res.status(500).json({success: false, error: "Failed to send message."});
         }
     } catch (error) {
@@ -41,7 +49,11 @@ export async function otpVerificationRequestToAuthService(req: Request, res: Res
         const response = await axios.post(`${AUTH_SERVICE_URL}/otp/verify`, {email, otp});
         if (response.data.success) {
             res.status(200).json({token: response.data.token, message: response.data.message});
-        } else {
+        }
+        else if(response.status === 401) {
+            res.status(401).json({success: false, error: response.data.errors});
+        }
+        else {
             res.status(500).json({success: false, error: "Failed to send message."});
         }
     } catch (error) {
@@ -55,7 +67,11 @@ export async function passwordResetRequestToAuthService(req: Request, res: Respo
         const response = await axios.post(`${AUTH_SERVICE_URL}/auth/password-reset`,{email})
         if (response.data.success) {
             res.status(200).json({success: true, message: response.data.msg});
-        } else {
+        }
+        else if(response.status === 401) {
+            res.status(401).json({success: false, error: response.data.errors});
+        }
+        else {
             res.status(500).json({success: false, error: "Failed to send message."});
         }
     } catch (error) {
@@ -70,7 +86,11 @@ export async function changePasswordRequestToAuthService(req: Request, res: Resp
         const response = await axios.post(`${AUTH_SERVICE_URL}/auth/change-password`, {email, password, otp})
         if (response.data.success) {
             res.status(200).json({token: response.data.token, message: response.data.msg});
-        } else {
+        }
+        else if(response.status === 401) {
+            res.status(401).json({success: false, error: response.data.errors});
+        }
+        else {
             res.status(500).json({success: false, error: "Failed to change password."});
         }
     } catch (error) {
