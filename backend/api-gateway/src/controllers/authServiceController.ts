@@ -13,6 +13,9 @@ export async function signInRequestToAuthService(req: Request, res: Response) {
         if (response.data.success) {
             res.status(200).json({ token: response.data.token, name:response.data.name, message: response.data.message });
         }
+        else if(response.status === 400) {
+            res.status(400).json({success: false, error: response.data.errors});
+        }
         else if(response.status === 401) {
             res.status(401).json({success: false, error: response.data.errors});
         }
@@ -26,20 +29,37 @@ export async function signInRequestToAuthService(req: Request, res: Response) {
 
 export async function signUpRequestToAuthService(req: Request, res: Response) {
     try {
-        const {name, email, password} = req.body;
-        console.log(name, email, password);
-        const response = await axios.post(`${AUTH_SERVICE_URL}/auth/sign-up`, {name, email, password});
-        if (response.data.success) {
-            res.status(200).json({success: true, message: response.data.message});
+        const { name, email, password } = req.body;
+
+        const response = await axios.post(`${AUTH_SERVICE_URL}/auth/sign-up`, {
+            name,
+            email,
+            password,
+        });
+        console.log(response.data);
+
+        // Success: Status 2xx
+        res.status(200).json({
+            success: response.data.success,
+            message: response.data.message,
+        });
+    } catch (error: any) {
+        console.error("[API Gateway] Auth Service error:", error.message);
+
+        if (axios.isAxiosError(error) && error.response) {
+            const data = error.response.data;
+
+            res.json({
+                success: false,
+                errors: data?.errors || data?.message || "Auth service returned an error",
+            });
+        } else {
+            // Unexpected or network error
+            res.status(500).json({
+                success: false,
+                errors: "Internal server error",
+            });
         }
-        else if(response.status === 401) {
-            res.status(401).json({success: false, error: response.data.errors});
-        }
-        else {
-            res.status(500).json({success: false, error: "Failed to send message."});
-        }
-    } catch (error) {
-        console.error("[API Gateway] Failed to reach Auth Service for sign-up:", error);
     }
 }
 
