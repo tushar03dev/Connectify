@@ -11,7 +11,11 @@ import {completeSignUpPayload} from "../types/completeSignup";
 import {signInPayload} from "../types/signIn";
 import {emailOnlyPayload} from "../types/passwordReset";
 import {changePasswordPayload} from "../types/changePassword";
-import zod from "zod";
+import zod, { ZodError } from 'zod';
+
+function flattenZodError(err: ZodError) {
+    return err.flatten().fieldErrors;
+}
 
 const env = process.env.NODE_ENV;
 dotenv.config({path: `.env.${env}`});
@@ -21,19 +25,26 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
     const parsedPayload = signUpPayload.safeParse(createPayload);
 
     if(!parsedPayload.success) {
-        const errorTree = zod.treeifyError(parsedPayload.error);
-        res.status(401).json({ message: "Invalid input", errors: errorTree });
+        const errors = flattenZodError(parsedPayload.error);
+        console.log(errors);
+        res.json({ message: "Invalid input", errors });
         return;
     }
 
     try {
         const existingUser = await User.findOne({email: createPayload.email});
         if (existingUser) {
-            return res.status(400).send('User already exists.');
+            console.debug('User already exists', existingUser);
+            res.status(400).json({ errors: 'USER_ALREADY_EXISTS' });
+            return
         }
 
         // Send OTP
         const otp = await sendOTP(createPayload.email);
+        if (!otp) {
+            res.status(400).json({errors : 'Otp Not Found'});
+            return;
+        }
 
         // Store user temporarily in Redis using the OTP token as key
         const tempUserData = JSON.stringify({name: createPayload.name, password: createPayload.password});

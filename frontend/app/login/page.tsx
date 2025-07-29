@@ -19,24 +19,24 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isForgotPassword, setIsForgotPassword] = useState(false)
   const [isOtpSent, setIsOtpSent] = useState(false)
-  const [error, setError] = useState("")
+  const [error, seterror] = useState("")
   const { login, requestOtp, verifyOtpAndReset } = useAuth()
   const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    setError("")
+    seterror("")
 
     try {
       const success = await login(email, password)
       if (success) {
         router.push("/")
       } else {
-        setError("Invalid email or password")
+        seterror("Invalid email or password")
       }
     } catch (err) {
-      setError("An error occurred. Please try again.")
+      seterror("An error occurred. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -45,18 +45,18 @@ export default function LoginPage() {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    setError("")
+    seterror("")
 
     try {
       const success = await requestOtp(email)
       if (success) {
         setIsOtpSent(true)
-        setError("OTP sent successfully")
+        seterror("OTP sent successfully")
       } else {
-        setError("Failed to send OTP. Please try again.")
+        seterror("Failed to send OTP. Please try again.")
       }
     } catch (err) {
-      setError("An error occurred while sending OTP. Please try again.")
+      seterror("An error occurred while sending OTP. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -65,28 +65,22 @@ export default function LoginPage() {
   const handleVerifyOtpAndReset = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    setError("")
+    seterror("")
 
     try {
-      const otpToken = localStorage.getItem("otpToken")
-      console.log(otpToken)
-      if (!otpToken) {
-        console.error("Token not found")
-        return
-      }
-      const success = await verifyOtpAndReset(email, newPassword, otp, otpToken)
+      const success = await verifyOtpAndReset(email, newPassword, otp)
       if (success) {
-        setError("Password reset successfully")
+        seterror("Password reset successfully")
         setIsForgotPassword(false)
         setIsOtpSent(false)
         setEmail("")
         setOtp("")
         setNewPassword("")
       } else {
-        setError("Invalid OTP or reset failed")
+        seterror("Invalid OTP or reset failed")
       }
     } catch (err) {
-      setError("An error occurred while verifying OTP. Please try again.")
+      seterror("An error occurred while verifying OTP. Please try again.")
     } finally {
       setIsLoading(false)
     }

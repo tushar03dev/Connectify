@@ -18,13 +18,12 @@ export default function SignupPage() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const { signup, verifyOtp } = useAuth()
+  const [frontendErrors, setFrontendErrors] = useState("")
+  const { signup, verifyOtp, errors } = useAuth()
   const [showOtpInput, setShowOtpInput] = useState(false)
   const [otp, setOtp] = useState("")
-  const [otpToken, setOtpToken] = useState('');
   const router = useRouter()
-  const [errors, setErrors] = useState({ password: '' });
+  const [passwordErrors, setPasswordErrors] = useState({ password: '' });
 
 
   const validatePassword = (pwd : string) => {
@@ -39,16 +38,16 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    setError("")
+    setFrontendErrors("")
 
     const pwdError = validatePassword(password);
     if (pwdError) {
-      setErrors({ password: pwdError });
+      setPasswordErrors({ password: pwdError });
       return; // Don't submit
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
+      setFrontendErrors("Passwords do not match")
       setIsLoading(false)
       return
     }
@@ -58,10 +57,12 @@ export default function SignupPage() {
       if (success) {
         setShowOtpInput(true)
       } else {
-        setError("Failed to create account")
+        console.log(errors);
+        console.log('hello')
+        setFrontendErrors(errors)
       }
     } catch (err) {
-      setError("An error occurred. Please try again.")
+      setFrontendErrors("An error occurred. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -91,7 +92,8 @@ export default function SignupPage() {
         </CardHeader>
         <form onSubmit={handleSignup}>
           <CardContent className="space-y-4">
-            {error && <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">{error}</div>}
+            {errors && <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">{errors}</div>}
+            {frontendErrors && <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">{frontendErrors}</div>}
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input
@@ -123,11 +125,11 @@ export default function SignupPage() {
                 onChange={(e) => {
                   const value = e.target.value.trim();
                   setPassword(value);
-                  setErrors({ ...errors, password: validatePassword(value)})
+                  setPasswordErrors({ ...passwordErrors, password: validatePassword(value)})
                 }}
                 required
               />
-              {errors.password && <span style={{ color: 'red' }}>{errors.password}</span>}
+              {passwordErrors.password && <span style={{ color: 'red' }}>{passwordErrors.password}</span>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirm-password">Confirm Password</Label>

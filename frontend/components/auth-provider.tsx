@@ -17,6 +17,7 @@ let tempUser:any;
 
 type AuthContextType = {
   user: User
+  errors : string
   login: (email: string, password: string) => Promise<boolean>
   signup: (name: string, email: string, password: string) => Promise<boolean>
   logout: () => void
@@ -28,6 +29,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  errors: "",
   login: async () => false,
   signup: async () => false,
   logout: () => {},
@@ -39,6 +41,7 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User>(null)
+  const [errors, setErrors] = useState<string>("")
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -49,6 +52,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setIsLoading(false)
   }, [])
+
+  useEffect(() => {
+    console.log('errors changed:', errors);
+  }, [errors]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -91,7 +98,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         tempUser = { name, email};
         return true
       } else {
-        console.error('Signup failed. Please try again.');
+        if(response?.data?.errors === 'USER_ALREADY_EXISTS') {
+          console.log('hii')
+          setErrors(response.data.error);
+        }
+        console.log(response?.data?.errors);
         return false
       }
     } catch (error) {
@@ -164,7 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("token")
   }
 
-  return <AuthContext.Provider value={{ user, login, signup, logout, isLoading, verifyOtp, requestOtp, verifyOtpAndReset}}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ errors, user, login, signup, logout, isLoading, verifyOtp, requestOtp, verifyOtpAndReset}}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => useContext(AuthContext)
