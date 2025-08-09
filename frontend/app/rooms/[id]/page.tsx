@@ -543,7 +543,6 @@ export default function RoomPage() {
     const {id} = useParams()
     const {user} = useAuth()
     const [isUploading, setIsUploading] = useState(false)
-    const {selectedRoom} = useRoom()
     const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null)
     const [selectedVideoId, setSelectedVideoId] = useState<string | null>("")
     const [videoFile, setVideoFile] = useState<File | null>(null)
@@ -1270,7 +1269,37 @@ export default function RoomPage() {
         return userId === user?.id || userId === "current-user"
     }
 
+    const usePersistentRoom = () => {
+        const { selectedRoom } = useRoom();
+        const [room, setRoom] = useState<Room | null>(null);
 
+        useEffect(() => {
+            if (selectedRoom) {
+                // Save new room to localStorage and update state
+                localStorage.setItem("selectedRoom", JSON.stringify(selectedRoom));
+                setRoom(selectedRoom);
+            } else {
+                // Fallback to stored room if available
+                const saved = localStorage.getItem("selectedRoom");
+                if (saved) {
+                    try {
+                        setRoom(JSON.parse(saved));
+                    } catch (err) {
+                        console.error("Failed to parse saved room from localStorage", err);
+                        setRoom(null);
+                    }
+                } else {
+                    setRoom(null);
+                }
+            }
+        }, [selectedRoom]);
+
+        return room;
+    }
+    const room = usePersistentRoom();
+
+
+    // @ts-ignore
     return (
         <AuthCheck redirectTo="/login">
             <div
@@ -1288,7 +1317,7 @@ export default function RoomPage() {
 
                 <div className="container mx-auto grid min-h-screen grid-rows-[auto_1fr] gap-6 p-4 relative z-10">
                     <RoomHeader
-                        roomName={selectedRoom == null ? "Room" : selectedRoom.name}
+                        roomName={room?.name || "Room"}
                         id={id as string}
                         users={users}
                         showParticipants={showParticipants}
@@ -1469,7 +1498,7 @@ export default function RoomPage() {
                                                 <div className="flex items-center space-x-2">
                                                     <Badge variant="secondary"
                                                            className="bg-blue-500/20 text-blue-300">
-                                                        {messages.length} messages
+                                                        {messages.length === 1 ? `${messages.length} message` : `${messages.length} messages`}
                                                     </Badge>
                                                     {unreadCount > 0 && (
                                                         <Badge
