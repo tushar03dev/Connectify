@@ -543,7 +543,6 @@ export default function RoomPage() {
     const {id} = useParams()
     const {user} = useAuth()
     const [isUploading, setIsUploading] = useState(false)
-    const {selectedRoom} = useRoom()
     const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null)
     const [selectedVideoId, setSelectedVideoId] = useState<string | null>("")
     const [videoFile, setVideoFile] = useState<File | null>(null)
@@ -557,7 +556,6 @@ export default function RoomPage() {
     const [messages, setMessages] = useState<Message[]>([])
     const [users, setUsers] = useState<User[]>([])
     const [isFullscreen, setIsFullscreen] = useState(false)
-    const [isTheaterMode, setIsTheaterMode] = useState(true)
     const [showChatInFullscreen, setShowChatInFullscreen] = useState(false)
     const [showParticipants, setShowParticipants] = useState(false)
     const [showControls, setShowControls] = useState(true)
@@ -798,19 +796,6 @@ export default function RoomPage() {
         // Make sure element is properly focused and interactable
         element.focus()
 
-        // Add a small delay to ensure user gesture is properly registered
-        await new Promise((resolve) => setTimeout(resolve, 50))
-
-        // Log browser capabilities
-        console.log("Browser fullscreen support:", {
-            requestFullscreen: element.requestFullscreen,
-            webkitRequestFullscreen: (element as any).webkitRequestFullscreen,
-            mozRequestFullScreen: (element as any).mozRequestFullScreen,
-            msRequestFullscreen: (element as any).msRequestFullscreen,
-            fullscreenEnabled: document.fullscreenEnabled,
-            webkitFullscreenEnabled: (document as any).webkitFullscreenEnabled,
-        })
-
         // Check current fullscreen state across all browsers
         const currentFullscreenElement =
             document.fullscreenElement ||
@@ -895,7 +880,7 @@ export default function RoomPage() {
                     console.log("Exit fullscreen request completed successfully")
                 }
             }
-            setShowChatInFullscreen(false);
+            setShowChatInFullscreen(false)
         } catch (error) {
             console.error("Fullscreen API error:", error)
 
@@ -951,6 +936,7 @@ export default function RoomPage() {
         const handleFullscreenChange = () => {
             // Clear any existing timeout to debounce rapid changes
             clearTimeout(fullscreenChangeTimeout)
+            setShowChatInFullscreen(false)
 
             fullscreenChangeTimeout = setTimeout(() => {
                 const isNowFullscreen = !!(
@@ -967,7 +953,6 @@ export default function RoomPage() {
                     setIsFullscreen(isNowFullscreen)
 
                     if (!isNowFullscreen) {
-                        setIsTheaterMode(false)
                         setShowControls(true)
                     }
                 }
@@ -978,7 +963,6 @@ export default function RoomPage() {
             console.error("Fullscreen error event:", event)
             // Reset state on error
             setIsFullscreen(false)
-            setIsTheaterMode(false)
         }
 
         // Add all possible fullscreen event listeners
@@ -1003,27 +987,6 @@ export default function RoomPage() {
             })
         }
     }, [isFullscreen]) // Add isFullscreen as dependency
-
-    // Keyboard shortcuts for fullscreen
-    useEffect(() => {
-        if (typeof window === "undefined") return
-
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Only trigger if not typing in an input
-            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-                return
-            }
-
-            if (e.key === "f" || e.key === "F") {
-                e.preventDefault()
-                console.log("F key pressed, attempting fullscreen")
-                toggleFullscreen()
-            }
-        }
-
-        document.addEventListener("keydown", handleKeyDown)
-        return () => document.removeEventListener("keydown", handleKeyDown)
-    }, [])
 
     // Handle auto-scroll and unread count
     useEffect(() => {
@@ -1107,6 +1070,14 @@ export default function RoomPage() {
             setSelectedVideoPath(videoUrl)
             setSelectedVideoId(videoId)
             setIsPlaying(true)
+
+            if (videoRef.current) {
+                videoRef.current.src = videoUrl;
+                videoRef.current.load(); // ensure the new src is loaded
+                videoRef.current.play().catch((error) => {
+                    console.error("Autoplay error:", error);
+                });
+            }
 
             socketRef.current?.emit("video-selected", {
                 roomId: id,
@@ -1271,23 +1242,13 @@ export default function RoomPage() {
         }
     }
 
-    const toggleTheaterMode = () => {
-        toggleFullscreen()
-        if (!isFullscreen) {
-            setShowChatInFullscreen(false)
-            setIsTheaterMode(false)
-        } else {
-            setIsTheaterMode(!isTheaterMode)
-        }
-    }
-
     const handleMouseMove = () => {
         setShowControls(true)
         if (controlsTimeoutRef.current) {
             clearTimeout(controlsTimeoutRef.current)
         }
         controlsTimeoutRef.current = setTimeout(() => {
-            if (isPlaying && (isFullscreen || isTheaterMode)) {
+            if (isPlaying && (isFullscreen)) {
                 setShowControls(false)
             }
         }, 3000)
@@ -1316,7 +1277,37 @@ export default function RoomPage() {
         return userId === user?.id || userId === "current-user"
     }
 
+    const usePersistentRoom = () => {
+        const { selectedRoom } = useRoom();
+        const [room, setRoom] = useState<Room | null>(null);
 
+        useEffect(() => {
+            if (selectedRoom) {
+                // Save new room to localStorage and update state
+                localStorage.setItem("selectedRoom", JSON.stringify(selectedRoom));
+                setRoom(selectedRoom);
+            } else {
+                // Fallback to stored room if available
+                const saved = localStorage.getItem("selectedRoom");
+                if (saved) {
+                    try {
+                        setRoom(JSON.parse(saved));
+                    } catch (err) {
+                        console.error("Failed to parse saved room from localStorage", err);
+                        setRoom(null);
+                    }
+                } else {
+                    setRoom(null);
+                }
+            }
+        }, [selectedRoom]);
+
+        return room;
+    }
+    const room = usePersistentRoom();
+
+
+    // @ts-ignore
     return (
         <AuthCheck redirectTo="/login">
             <div
@@ -1334,7 +1325,7 @@ export default function RoomPage() {
 
                 <div className="container mx-auto grid min-h-screen grid-rows-[auto_1fr] gap-6 p-4 relative z-10">
                     <RoomHeader
-                        roomName={selectedRoom == null ? "Room" : selectedRoom.name}
+                        roomName={room?.name || "Room"}
                         id={id as string}
                         users={users}
                         showParticipants={showParticipants}
@@ -1391,6 +1382,7 @@ export default function RoomPage() {
                                             });
                                             setIsPlaying(false);
                                         }}
+                                        onClick={handlePlayPause}
                                     />
 
                                     {/* >> Chat Toggle (top-right, only in fullscreen) */}
@@ -1492,11 +1484,10 @@ export default function RoomPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={toggleTheaterMode}
+                                                    onClick={toggleFullscreen}
                                                     className="text-white hover:bg-white/20"
                                                 >
-                                                    {isTheaterMode ? <Maximize className="h-5 w-5"/> :
-                                                        <Minimize className="h-5 w-5"/>}
+                                                    {isFullscreen ? <Minimize className="h-5 w-5"/> : <Maximize className="h-5 w-5"/> }
                                                 </Button>
                                             </div>
                                         </div>
@@ -1516,7 +1507,7 @@ export default function RoomPage() {
                                                 <div className="flex items-center space-x-2">
                                                     <Badge variant="secondary"
                                                            className="bg-blue-500/20 text-blue-300">
-                                                        {messages.length} messages
+                                                        {messages.length === 1 ? `${messages.length} message` : `${messages.length} messages`}
                                                     </Badge>
                                                     {unreadCount > 0 && (
                                                         <Badge

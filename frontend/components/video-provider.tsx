@@ -94,6 +94,10 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
                 }
             );
 
+            if (response.data?.room) {
+                localStorage.setItem("selectedRoom", JSON.stringify(response.data.room));
+            }
+
             if (response.data?.videos) {
                 setVideos(response.data.videos);
                 return true;

@@ -18,17 +18,27 @@ jobs:
       - name: Docker Login
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      - name: Build & Push Docker Images
+      - name: Detect Changed Services
+        id: changes
         run: |
-          docker build -t tushar03dev/connectify-backend:api-gateway ./backend/api-gateway
-          docker build -t tushar03dev/connectify-backend:auth-service ./backend/auth-service
-          docker build -t tushar03dev/connectify-backend:room-service ./backend/room-service
-          docker build -t tushar03dev/connectify-backend:video-chat-service ./backend/video-chat-service
-          
-          docker push tushar03dev/connectify-backend:api-gateway
-          docker push tushar03dev/connectify-backend:auth-service
-          docker push tushar03dev/connectify-backend:room-service
-          docker push tushar03dev/connectify-backend:video-chat-service
+          CHANGED_SERVICES=""
+          for service in api-gateway auth-service room-service video-chat-service; do
+            if git diff --quiet HEAD^ HEAD -- backend/$service; then
+              echo "$service unchanged"
+            else
+              CHANGED_SERVICES="$CHANGED_SERVICES $service"
+            fi
+          done
+          echo "services=$CHANGED_SERVICES" >> $GITHUB_OUTPUT
+
+      - name: Build & Push Changed Docker Images
+        if: steps.changes.outputs.services != ''
+        run: |
+          for service in ${{ steps.changes.outputs.services }}; do
+            IMAGE_NAME="tushar03dev/connectify-backend:$service"
+            docker build --cache-from=$IMAGE_NAME -t $IMAGE_NAME ./backend/$service
+            docker push $IMAGE_NAME
+          done
 
       - name: Setup SSH
         run: |
@@ -44,4 +54,5 @@ jobs:
             docker compose pull
             docker compose down
             docker compose up -d
+            docker image prune -af   # Cleanup unused images
           EOF
