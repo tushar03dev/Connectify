@@ -1071,6 +1071,14 @@ export default function RoomPage() {
             setSelectedVideoId(videoId)
             setIsPlaying(true)
 
+            if (videoRef.current) {
+                videoRef.current.src = videoUrl;
+                videoRef.current.load(); // ensure the new src is loaded
+                videoRef.current.play().catch((error) => {
+                    console.error("Autoplay error:", error);
+                });
+            }
+
             socketRef.current?.emit("video-selected", {
                 roomId: id,
                 videoUrl,
@@ -1374,6 +1382,7 @@ export default function RoomPage() {
                                             });
                                             setIsPlaying(false);
                                         }}
+                                        onClick={handlePlayPause}
                                     />
 
                                     {/* >> Chat Toggle (top-right, only in fullscreen) */}
