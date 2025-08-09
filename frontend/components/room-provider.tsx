@@ -66,6 +66,7 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
 
             if (response.data?.room) {
                 setSelectedRoom(response.data.room);
+                localStorage.setItem("selectedRoom", JSON.stringify(response.data.room))
                 console.log(selectedRoom?.name)
                 return true;
             }
@@ -101,6 +102,7 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
 
             if (response.data?.room) {
                 setSelectedRoom(response.data.room)
+                localStorage.setItem("selectedRoom", JSON.stringify(response.data.room))
                 return true;
             }
             return false;
