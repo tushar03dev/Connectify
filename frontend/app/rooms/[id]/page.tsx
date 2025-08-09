@@ -543,11 +543,10 @@ export default function RoomPage() {
     const {id} = useParams()
     const {user} = useAuth()
     const [isUploading, setIsUploading] = useState(false)
-    const {selectedRoom} = useRoom()
     const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null)
     const [selectedVideoId, setSelectedVideoId] = useState<string | null>("")
     const [videoFile, setVideoFile] = useState<File | null>(null)
-    const {video, videos, uploadVideo, getVideos, isLoading, deleteVideo} = useVideo()
+    const {video, selectedRoom, videos, uploadVideo, getVideos, isLoading, deleteVideo} = useVideo()
     const [isPlaying, setIsPlaying] = useState(false)
     const [volume, setVolume] = useState(80)
     const [isMuted, setIsMuted] = useState(false)
@@ -557,7 +556,6 @@ export default function RoomPage() {
     const [messages, setMessages] = useState<Message[]>([])
     const [users, setUsers] = useState<User[]>([])
     const [isFullscreen, setIsFullscreen] = useState(false)
-    const [isTheaterMode, setIsTheaterMode] = useState(true)
     const [showChatInFullscreen, setShowChatInFullscreen] = useState(false)
     const [showParticipants, setShowParticipants] = useState(false)
     const [showControls, setShowControls] = useState(true)
@@ -798,19 +796,6 @@ export default function RoomPage() {
         // Make sure element is properly focused and interactable
         element.focus()
 
-        // Add a small delay to ensure user gesture is properly registered
-        await new Promise((resolve) => setTimeout(resolve, 50))
-
-        // Log browser capabilities
-        console.log("Browser fullscreen support:", {
-            requestFullscreen: element.requestFullscreen,
-            webkitRequestFullscreen: (element as any).webkitRequestFullscreen,
-            mozRequestFullScreen: (element as any).mozRequestFullScreen,
-            msRequestFullscreen: (element as any).msRequestFullscreen,
-            fullscreenEnabled: document.fullscreenEnabled,
-            webkitFullscreenEnabled: (document as any).webkitFullscreenEnabled,
-        })
-
         // Check current fullscreen state across all browsers
         const currentFullscreenElement =
             document.fullscreenElement ||
@@ -895,7 +880,7 @@ export default function RoomPage() {
                     console.log("Exit fullscreen request completed successfully")
                 }
             }
-            setShowChatInFullscreen(false);
+            setShowChatInFullscreen(false)
         } catch (error) {
             console.error("Fullscreen API error:", error)
 
@@ -951,6 +936,7 @@ export default function RoomPage() {
         const handleFullscreenChange = () => {
             // Clear any existing timeout to debounce rapid changes
             clearTimeout(fullscreenChangeTimeout)
+            setShowChatInFullscreen(false)
 
             fullscreenChangeTimeout = setTimeout(() => {
                 const isNowFullscreen = !!(
@@ -967,7 +953,6 @@ export default function RoomPage() {
                     setIsFullscreen(isNowFullscreen)
 
                     if (!isNowFullscreen) {
-                        setIsTheaterMode(false)
                         setShowControls(true)
                     }
                 }
@@ -978,7 +963,6 @@ export default function RoomPage() {
             console.error("Fullscreen error event:", event)
             // Reset state on error
             setIsFullscreen(false)
-            setIsTheaterMode(false)
         }
 
         // Add all possible fullscreen event listeners
@@ -1003,27 +987,6 @@ export default function RoomPage() {
             })
         }
     }, [isFullscreen]) // Add isFullscreen as dependency
-
-    // Keyboard shortcuts for fullscreen
-    useEffect(() => {
-        if (typeof window === "undefined") return
-
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Only trigger if not typing in an input
-            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-                return
-            }
-
-            if (e.key === "f" || e.key === "F") {
-                e.preventDefault()
-                console.log("F key pressed, attempting fullscreen")
-                toggleFullscreen()
-            }
-        }
-
-        document.addEventListener("keydown", handleKeyDown)
-        return () => document.removeEventListener("keydown", handleKeyDown)
-    }, [])
 
     // Handle auto-scroll and unread count
     useEffect(() => {
@@ -1271,23 +1234,13 @@ export default function RoomPage() {
         }
     }
 
-    const toggleTheaterMode = () => {
-        toggleFullscreen()
-        if (!isFullscreen) {
-            setShowChatInFullscreen(false)
-            setIsTheaterMode(false)
-        } else {
-            setIsTheaterMode(!isTheaterMode)
-        }
-    }
-
     const handleMouseMove = () => {
         setShowControls(true)
         if (controlsTimeoutRef.current) {
             clearTimeout(controlsTimeoutRef.current)
         }
         controlsTimeoutRef.current = setTimeout(() => {
-            if (isPlaying && (isFullscreen || isTheaterMode)) {
+            if (isPlaying && (isFullscreen)) {
                 setShowControls(false)
             }
         }, 3000)
@@ -1492,11 +1445,10 @@ export default function RoomPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={toggleTheaterMode}
+                                                    onClick={toggleFullscreen}
                                                     className="text-white hover:bg-white/20"
                                                 >
-                                                    {isTheaterMode ? <Maximize className="h-5 w-5"/> :
-                                                        <Minimize className="h-5 w-5"/>}
+                                                    {isFullscreen ? <Minimize className="h-5 w-5"/> : <Maximize className="h-5 w-5"/> }
                                                 </Button>
                                             </div>
                                         </div>

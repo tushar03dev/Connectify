@@ -34,7 +34,7 @@ const videoProxyOptions: Options = {
     changeOrigin: true,
     pathRewrite: {
         '^/video/play': '/play', // Map /video/play/:id to /play/:id
-        '^/video': '/', // Map /video/* to /* (e.g., /video/get-videos to /get-videos)
+        '^/video': '/',
     },
     onProxyReq: (proxyReq: any, req: any, res : any) => {
         console.log(`Proxying ${req.method} request to: ${req.url} -> ${proxyReq.path}`); // Debug log
