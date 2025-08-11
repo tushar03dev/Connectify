@@ -214,3 +214,61 @@ export const googleLogin = (req: Request, res: Response) => {
     res.redirect(authUrl);
 };
 
+export const googleCallback = async (req: Request, res: Response) => {
+    const code = req.query.code as string;
+
+    try {
+
+        const tokenResponse = await axios.post(
+            "https://oauth2.googleapis.com/token",
+            {
+                code,
+                client_id: process.env.GOOGLE_CLIENT_ID,
+                client_secret: process.env.GOOGLE_CLIENT_SECRET,
+                redirect_uri: redirectUri,
+                grant_type: "authorization_code",
+            },
+            { headers: { "Content-Type": "application/json" } }
+        );
+
+        const { access_token } = tokenResponse.data;
+
+
+        const userInfoResponse = await axios.get(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            {
+                headers: { Authorization: `Bearer ${access_token}` },
+            }
+        );
+
+        const { email, name, picture } = userInfoResponse.data;
+
+
+        let user = await User.findOne({ email });
+
+        if (!user) {
+            user = new User({
+                email,
+                name,
+                picture,
+                password: null,
+                authProvider: "google",
+            });
+            await user.save();
+        }
+
+
+        const token = jwt.sign(
+            { id: user._id, email: user.email },
+            process.env.JWT_SECRET!,
+            { expiresIn: "1h" }
+        );
+
+
+        res.json({ token, user });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Google authentication failed");
+    }
+};
