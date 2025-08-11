@@ -1,5 +1,12 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import {signUp, signIn, passwordReset, changePassword} from '../controllers/authController';
+import {
+    signUp,
+    signIn,
+    passwordReset,
+    changePassword,
+    googleLogin,
+    googleCallback
+} from '../controllers/authController';
 
 const router = Router();
 
@@ -15,6 +22,10 @@ router.post('/sign-in', (req: Request, res: Response, next: NextFunction) => {
 router.post('/password-reset',passwordReset);
 
 router.post('/change-password',changePassword);
+
+router.get("/google", googleLogin);
+
+router.get("/google/callback", googleCallback);
 
 export default router;
 
