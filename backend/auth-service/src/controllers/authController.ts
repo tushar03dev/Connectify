@@ -122,6 +122,11 @@ export const signIn = async (req: Request, res: Response, next: NextFunction) =>
             return;
         }
 
+        if(user.password == null){
+            res.status(400).send('User logged in through different authentication.');
+            return;
+        }
+
         const isMatch = await bcrypt.compare(createPayload.password, user.password);
         if (!isMatch) {
             res.status(400).send('Invalid password');

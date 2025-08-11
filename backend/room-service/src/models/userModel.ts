@@ -7,7 +7,7 @@ export interface IUser extends Document{
     videos?: mongoose.Types.ObjectId[];
     picture?: string;
     password?: string | null;
-    authProvider?: string;
+    authProvider?: ['google','apple','local'];
 }
 const UserSchema = new mongoose.Schema<IUser>({
     name: { type: String, required: true },
@@ -16,7 +16,7 @@ const UserSchema = new mongoose.Schema<IUser>({
     videos:{type:[mongoose.Types.ObjectId]},
     picture: String,
     password: { type: String, default: null },
-    authProvider: { type: String, default: "local" },
+    authProvider: { type: Enumerator, default: "local" },
 })
 
 export const User = mongoose.model<IUser>('User',UserSchema);

@@ -29,7 +29,6 @@ connectDB().then(async ()=> {
         app.use('/auth', authRoutes);
         }
     );
-
 });
 
 app.use('/otp',otpRoutes);
