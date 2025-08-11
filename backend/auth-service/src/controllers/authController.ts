@@ -12,6 +12,7 @@ import {signInPayload} from "../types/signIn";
 import {emailOnlyPayload} from "../types/passwordReset";
 import {changePasswordPayload} from "../types/changePassword";
 import zod, { ZodError } from 'zod';
+import axios from "axios";
 
 function flattenZodError(err: ZodError) {
     return err.flatten().fieldErrors;
@@ -19,6 +20,8 @@ function flattenZodError(err: ZodError) {
 
 const env = process.env.NODE_ENV;
 dotenv.config({path: `.env.${env}`});
+
+const redirectUri = "http://localhost:3000/auth/google/callback";
 
 export const signUp = async (req: Request, res: Response, next: NextFunction) => {
     const createPayload = req.body;
@@ -198,3 +201,16 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
         next(err);
     }
 }
+
+export const googleLogin = (req: Request, res: Response) => {
+    const scope = [
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "https://www.googleapis.com/auth/userinfo.email",
+    ].join(" ");
+
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.GOOGLE_CLIENT_ID
+    }&redirect_uri=${redirectUri}&response_type=code&scope=${encodeURIComponent(scope)}`;
+
+    res.redirect(authUrl);
+};
+
