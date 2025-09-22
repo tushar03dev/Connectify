@@ -86,47 +86,45 @@ export function OAuthSuccessHandler() {
     const router = useRouter()
 
     useEffect(() => {
-        const handleOAuthCallback = () => {
-            const urlParams = new URLSearchParams(window.location.search)
-            const token = urlParams.get("token")
-            const userData = urlParams.get("user")
-            const error = urlParams.get("error")
+        console.log("[OAuthSuccessHandler] useEffect triggered")
 
-            if (error) {
-                console.error("OAuth authentication failed:", error)
-                // Redirect back to login with error
-                router.push("/login?error=" + encodeURIComponent(error))
-                return
-            }
+        const urlParams = new URLSearchParams(window.location.search)
+        const token = urlParams.get("token")
+        const userData = urlParams.get("user")
+        const error = urlParams.get("error")
 
-            if (token && userData) {
-                try {
-                    const user = JSON.parse(decodeURIComponent(userData))
+        console.log("Token:", token)
+        console.log("UserData:", userData)
+        console.log("Error:", error)
 
-                    // Store token and user data
-                    localStorage.setItem("token", token)
-                    localStorage.setItem("connectify-user", JSON.stringify(user))
-
-                    // Update auth context
-                    setUser(user)
-
-                    // Clean up OAuth mode
-                    localStorage.removeItem("oauth-mode")
-
-                    // Redirect to home page
-                    router.push("/")
-                } catch (error) {
-                    console.error("Failed to parse user data:", error)
-                    router.push("/login?error=invalid_user_data")
-                }
-            }
+        if (error) {
+            console.error("OAuth authentication failed:", error)
+            router.replace("/login?error=" + encodeURIComponent(error))
+            return
         }
 
-        // Only run on pages that might receive OAuth callbacks
-        if (window.location.search.includes("token=") || window.location.search.includes("error=")) {
-            handleOAuthCallback()
+        if (token && userData) {
+            try {
+                const user = JSON.parse(decodeURIComponent(userData))
+                console.log("Parsed user:", user)
+
+                localStorage.setItem("token", token)
+                localStorage.setItem("connectify-user", JSON.stringify(user))
+
+                setUser(user)
+                localStorage.removeItem("oauth-mode")
+
+                console.log("Redirecting to /")
+                router.replace("/")
+            } catch (err) {
+                console.error("Failed to parse user data:", err)
+                router.replace("/login?error=invalid_user_data")
+            }
+        } else {
+            console.warn("No token or user found in query params")
         }
-    }, [setUser, router])
+    }, []) // run only once
+
 
     return null
 }
@@ -134,7 +132,6 @@ export function OAuthSuccessHandler() {
 export function OAuthButtonGroup({ mode }: { mode: "login" | "signup" }) {
     return (
         <div className="space-y-3">
-            <OAuthSuccessHandler />
             <OAuthButton provider="google" mode={mode} />
             <OAuthButton provider="apple" mode={mode} />
 
@@ -143,7 +140,9 @@ export function OAuthButtonGroup({ mode }: { mode: "login" | "signup" }) {
                     <span className="w-full border-t border-muted-foreground/20" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
+          <span className="bg-background px-2 text-muted-foreground">
+            Or continue with email
+          </span>
                 </div>
             </div>
         </div>
