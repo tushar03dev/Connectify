@@ -3,7 +3,7 @@ import {
     signUp,
     signIn,
     passwordReset,
-    changePassword, googleLogin, googleCallback
+    changePassword, googleLogin, googleCallback, appleLogin, appleCallback
 } from "../controllers/authController";
 
 const router = Router();
