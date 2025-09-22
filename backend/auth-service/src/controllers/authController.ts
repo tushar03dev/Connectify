@@ -339,3 +339,42 @@ export const appleLogin = (req: Request, res: Response) => {
     res.redirect(authUrl);
 };
 
+export const appleCallback = async (req: Request, res: Response) => {
+    const { code, id_token } = req.body; // Apple uses POST for callback
+
+    try {
+        // Exchange code for access token with Apple
+        const tokenResponse = await axios.post("https://appleid.apple.com/auth/token", {
+            code,
+            client_id: process.env.APPLE_CLIENT_ID,
+            client_secret: process.env.APPLE_CLIENT_SECRET,
+            redirect_uri: `${process.env.AUTH_SERVER_URL}/auth/apple/callback`,
+            grant_type: "authorization_code",
+        }, {
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        });
+
+        const { access_token } = tokenResponse.data;
+
+        // Extract user info from id_token (JWT)
+        const payload: any = jwt.decode(id_token);
+
+        let user = await User.findOne({ email: payload.email });
+        if (!user) {
+            user = new User({
+                email: payload.email,
+                name: payload.name || "",
+                password: null,
+                authProvider: "apple",
+            });
+            await user.save();
+        }
+
+        const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET!, { expiresIn: "1h" });
+
+        res.redirect(`http://localhost:3000/oauth-success?token=${encodeURIComponent(token)}&user=${encodeURIComponent(JSON.stringify(user))}`);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Apple authentication failed");
+    }
+};
