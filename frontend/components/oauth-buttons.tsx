@@ -1,6 +1,9 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/components/auth-provider"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 
 interface OAuthButtonProps {
     provider: "google" | "apple"
@@ -9,9 +12,13 @@ interface OAuthButtonProps {
 }
 
 export function OAuthButton({ provider, mode, className }: OAuthButtonProps) {
+    const router = useRouter()
+
     const handleOAuthLogin = () => {
+        // Store the current mode for the callback
+        localStorage.setItem("oauth-mode", mode)
         // Redirect user to backend OAuth route
-        window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/${provider}`
+        window.location.href = `http://localhost:5001/auth/${provider}`
     }
 
     const providerConfig = {
@@ -33,12 +40,12 @@ export function OAuthButton({ provider, mode, className }: OAuthButtonProps) {
                     />
                     <path
                         fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 2.43-4.53 6.16-4.53z"
                     />
                 </svg>
             ),
-            bgColor: "bg-white hover:bg-gray-50",
-            textColor: "text-gray-700",
+            bgColor: "bg-white hover:bg-gray-500",
+            textColor: "text-gray-700 hover:text-white",
             borderColor: "border-gray-300",
         },
         apple: {
@@ -61,7 +68,7 @@ export function OAuthButton({ provider, mode, className }: OAuthButtonProps) {
         <Button
             type="button"
             variant="outline"
-            className={`w-full ${config.bgColor} ${config.textColor} ${config.borderColor} border shadow-sm transition-colors ${className}`}
+            className={`w-full ${config.bgColor} ${config.textColor} ${config.borderColor} border shadow-sm transition-all duration-200 hover:scale-105 ${className}`}
             onClick={handleOAuthLogin}
         >
             <div className="flex items-center justify-center gap-3">
@@ -74,9 +81,60 @@ export function OAuthButton({ provider, mode, className }: OAuthButtonProps) {
     )
 }
 
+export function OAuthSuccessHandler() {
+    const { setUser } = useAuth()
+    const router = useRouter()
+
+    useEffect(() => {
+        const handleOAuthCallback = () => {
+            const urlParams = new URLSearchParams(window.location.search)
+            const token = urlParams.get("token")
+            const userData = urlParams.get("user")
+            const error = urlParams.get("error")
+
+            if (error) {
+                console.error("OAuth authentication failed:", error)
+                // Redirect back to login with error
+                router.push("/login?error=" + encodeURIComponent(error))
+                return
+            }
+
+            if (token && userData) {
+                try {
+                    const user = JSON.parse(decodeURIComponent(userData))
+
+                    // Store token and user data
+                    localStorage.setItem("token", token)
+                    localStorage.setItem("connectify-user", JSON.stringify(user))
+
+                    // Update auth context
+                    setUser(user)
+
+                    // Clean up OAuth mode
+                    localStorage.removeItem("oauth-mode")
+
+                    // Redirect to home page
+                    router.push("/")
+                } catch (error) {
+                    console.error("Failed to parse user data:", error)
+                    router.push("/login?error=invalid_user_data")
+                }
+            }
+        }
+
+        // Only run on pages that might receive OAuth callbacks
+        if (window.location.search.includes("token=") || window.location.search.includes("error=")) {
+            handleOAuthCallback()
+        }
+    }, [setUser, router])
+
+    return null
+}
+
 export function OAuthButtonGroup({ mode }: { mode: "login" | "signup" }) {
     return (
         <div className="space-y-3">
+            <OAuthSuccessHandler />
             <OAuthButton provider="google" mode={mode} />
             <OAuthButton provider="apple" mode={mode} />
 

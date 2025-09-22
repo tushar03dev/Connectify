@@ -26,6 +26,14 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+app.use(
+    "/auth/google",
+    createProxyMiddleware({
+        target: process.env.AUTH_SERVICE_URL,
+        changeOrigin: true,
+    })
+);
+
 app.use('/auth', authRoutes);
 app.use('/rooms', roomRoutes);
 

@@ -35,6 +35,7 @@ app.use('/otp',otpRoutes);
 
 //Error-handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    console.error("Request Payload :", req);
     console.error(err.stack);
     res.status(500).json({ message: 'Something went wrong!' });
 });

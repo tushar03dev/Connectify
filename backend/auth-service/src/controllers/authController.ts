@@ -21,9 +21,9 @@ function flattenZodError(err: ZodError) {
 const env = process.env.NODE_ENV;
 dotenv.config({path: `.env.${env}`});
 
-const redirectUri = "http://localhost:3000/auth/google/callback";
+const redirectUri = "http://localhost:5001/auth/google/callback";
 
-export const signUp = async (req: Request, res: Response, next: NextFunction) => {
+export const signUp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const createPayload = req.body;
     const parsedPayload = signUpPayload.safeParse(createPayload);
 
@@ -55,7 +55,7 @@ export const signUp = async (req: Request, res: Response, next: NextFunction) =>
         await redisClient.setEx(`otp:${createPayload.email}`, 300, otp);
         await redisClient.setEx(`signup:${createPayload.email}`, 300, tempUserData); // Expires in 5 minutes
 
-        return res.status(200).json({
+        res.status(200).json({
             success: true,
             message: 'OTP sent to your email. Please enter the OTP to complete sign-up.'
         });
@@ -208,72 +208,23 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
 }
 
 export const googleLogin = (req: Request, res: Response) => {
+    console.log("Google login request received");
+
     const scope = [
         "https://www.googleapis.com/auth/userinfo.profile",
         "https://www.googleapis.com/auth/userinfo.email",
     ].join(" ");
 
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.GOOGLE_CLIENT_ID
-    }&redirect_uri=${redirectUri}&response_type=code&scope=${encodeURIComponent(scope)}`;
+    const redirectUri = `${process.env.AUTH_SERVER_URL}/auth/google/callback`;
+    console.log("Redirect URI constructed:", redirectUri);
+
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${
+        process.env.GOOGLE_CLIENT_ID
+    }&redirect_uri=${encodeURIComponent(
+        redirectUri
+    )}&response_type=code&scope=${encodeURIComponent(scope)}`;
+
+    console.log("Redirecting user to Google Auth URL:", authUrl);
 
     res.redirect(authUrl);
-};
-
-export const googleCallback = async (req: Request, res: Response) => {
-    const code = req.query.code as string;
-
-    try {
-
-        const tokenResponse = await axios.post(
-            "https://oauth2.googleapis.com/token",
-            {
-                code,
-                client_id: process.env.GOOGLE_CLIENT_ID,
-                client_secret: process.env.GOOGLE_CLIENT_SECRET,
-                redirect_uri: redirectUri,
-                grant_type: "authorization_code",
-            },
-            { headers: { "Content-Type": "application/json" } }
-        );
-
-        const { access_token } = tokenResponse.data;
-
-
-        const userInfoResponse = await axios.get(
-            "https://www.googleapis.com/oauth2/v2/userinfo",
-            {
-                headers: { Authorization: `Bearer ${access_token}` },
-            }
-        );
-
-        const { email, name, picture } = userInfoResponse.data;
-
-
-        let user = await User.findOne({ email });
-
-        if (!user) {
-            user = new User({
-                email,
-                name,
-                picture,
-                password: null,
-                authProvider: "google",
-            });
-            await user.save();
-        }
-
-
-        const token = jwt.sign(
-            { id: user._id, email: user.email },
-            process.env.JWT_SECRET!,
-            { expiresIn: "1h" }
-        );
-
-
-        res.json({ token, user });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).send("Google authentication failed");
-    }
 };
