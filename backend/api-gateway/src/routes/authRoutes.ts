@@ -26,12 +26,4 @@ router.get("/auth/google/callback", (req, res) => {
     res.redirect(`${process.env.AUTH_SERVICE_URL}/auth/google/callback${req.url}`);
 });
 
-router.get("/auth/apple", (req, res) => {
-    res.redirect(`${process.env.AUTH_SERVICE_URL}/auth/apple`);
-});
-
-router.post("/auth/apple/callback", (req, res) => {
-    res.redirect(`${process.env.AUTH_SERVICE_URL}/auth/apple/callback`);
-});
-
 export default router;
