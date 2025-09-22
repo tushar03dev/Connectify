@@ -327,3 +327,15 @@ export const googleCallback = async(req: Request, res: Response, next: NextFunct
         res.status(500).send("Google authentication failed");
     }
 }
+
+export const appleLogin = (req: Request, res: Response) => {
+    const redirectUri = `${process.env.AUTH_SERVER_URL}/auth/apple/callback`;
+
+    const authUrl = `https://appleid.apple.com/auth/authorize?` +
+        `response_type=code%20id_token&client_id=${process.env.APPLE_CLIENT_ID}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&scope=name email&response_mode=form_post`;
+
+    res.redirect(authUrl);
+};
+

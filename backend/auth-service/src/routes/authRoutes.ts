@@ -18,4 +18,8 @@ router.post("/change-password", changePassword);
 router.get("/google", googleLogin);
 router.get("/google/callback", googleCallback);
 
+// Apple login & signup
+router.get("/google", appleLogin);
+router.get("/google/callback", appleCallback);
+
 export default router;
