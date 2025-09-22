@@ -14,8 +14,16 @@ const env = process.env.NODE_ENV;
 dotenv.config({ path: `.env.${env}` });
 console.log(`.env.${env}`);
 
-// Create proxy for WebSocket/socket.io traffic
+
 const chatServerTarget = process.env.VIDEO_SERVER_URL;
+const videoProxyOptions: Options = {
+    target: process.env.VIDEO_SERVER_URL,
+    changeOrigin: true,
+    pathRewrite: {
+        '^/video/play': '/play',
+        '^/video': '/',
+    }
+} as any;
 
 const app = express();
 
@@ -26,37 +34,8 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(
-    "/auth/google",
-    createProxyMiddleware({
-        target: process.env.AUTH_SERVICE_URL,
-        changeOrigin: true,
-    })
-);
-
 app.use('/auth', authRoutes);
 app.use('/rooms', roomRoutes);
-
-const videoProxyOptions: Options = {
-    target: process.env.VIDEO_SERVER_URL,
-    changeOrigin: true,
-    pathRewrite: {
-        '^/video/play': '/play', // Map /video/play/:id to /play/:id
-        '^/video': '/',
-    },
-    onProxyReq: (proxyReq: any, req: any, res : any) => {
-        console.log(`Proxying ${req.method} request to: ${req.url} -> ${proxyReq.path}`); // Debug log
-    },
-    onProxyRes: (proxyRes: any, req: any, res: any) => {
-        proxyRes.headers["Access-Control-Allow-Origin"] = "*";
-        proxyRes.headers["Access-Control-Expose-Headers"] = "Content-Length,Content-Type,Accept-Ranges";
-    },
-    onError: (err: any, req: any, res : any) => {
-        console.error("Proxy error:", err);
-        res.status(500).json({ error: "Proxy error", details: err.message });
-    },
-} as any;
-
 app.use('/video', authenticateToken, createProxyMiddleware(videoProxyOptions));
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
@@ -88,7 +67,7 @@ if(PORT){
         console.log(`API Gateway running on http://localhost:${PORT}`);
     });
 
-    // Handle WebSocket upgrade requests (important for Socket.IO)
+    // Handle WebSocket upgrade requests
     server.on('upgrade', (req, socket: Duplex, head) => {
         console.log('Upgrading WebSocket:', { url: req.url, headers: req.headers });
         if (socket instanceof net.Socket) {

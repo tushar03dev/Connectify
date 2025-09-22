@@ -18,7 +18,7 @@ export function OAuthButton({ provider, mode, className }: OAuthButtonProps) {
         // Store the current mode for the callback
         localStorage.setItem("oauth-mode", mode)
         // Redirect user to backend OAuth route
-        window.location.href = `http://localhost:5001/auth/${provider}`
+        window.location.href = `http://localhost:5000/auth/${provider}`
     }
 
     const providerConfig = {
