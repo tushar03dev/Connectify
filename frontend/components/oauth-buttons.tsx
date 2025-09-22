@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 
 interface OAuthButtonProps {
-    provider: "google" | "apple"
+    provider: "google"
     mode: "login" | "signup"
     className?: string
 }
@@ -18,7 +18,7 @@ export function OAuthButton({ provider, mode, className }: OAuthButtonProps) {
         // Store the current mode for the callback
         localStorage.setItem("oauth-mode", mode)
         // Redirect user to backend OAuth route
-        window.location.href = `http://localhost:5001/auth/${provider}`
+        window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/${provider}`
     }
 
     const providerConfig = {
@@ -44,21 +44,10 @@ export function OAuthButton({ provider, mode, className }: OAuthButtonProps) {
                     />
                 </svg>
             ),
-            bgColor: "bg-white hover:bg-gray-500",
+            bgColor: "bg-white hover:bg-black",
             textColor: "text-gray-700 hover:text-white",
-            borderColor: "border-gray-300",
-        },
-        apple: {
-            name: "Apple",
-            icon: (
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-                </svg>
-            ),
-            bgColor: "bg-black hover:bg-gray-900",
-            textColor: "text-white",
-            borderColor: "border-black",
-        },
+            borderColor: "border-gray-300 hover:border-black",
+        }
     }
 
     const config = providerConfig[provider]
@@ -86,47 +75,45 @@ export function OAuthSuccessHandler() {
     const router = useRouter()
 
     useEffect(() => {
-        const handleOAuthCallback = () => {
-            const urlParams = new URLSearchParams(window.location.search)
-            const token = urlParams.get("token")
-            const userData = urlParams.get("user")
-            const error = urlParams.get("error")
+        console.log("[OAuthSuccessHandler] useEffect triggered")
 
-            if (error) {
-                console.error("OAuth authentication failed:", error)
-                // Redirect back to login with error
-                router.push("/login?error=" + encodeURIComponent(error))
-                return
-            }
+        const urlParams = new URLSearchParams(window.location.search)
+        const token = urlParams.get("token")
+        const userData = urlParams.get("user")
+        const error = urlParams.get("error")
 
-            if (token && userData) {
-                try {
-                    const user = JSON.parse(decodeURIComponent(userData))
+        console.log("Token:", token)
+        console.log("UserData:", userData)
+        console.log("Error:", error)
 
-                    // Store token and user data
-                    localStorage.setItem("token", token)
-                    localStorage.setItem("connectify-user", JSON.stringify(user))
-
-                    // Update auth context
-                    setUser(user)
-
-                    // Clean up OAuth mode
-                    localStorage.removeItem("oauth-mode")
-
-                    // Redirect to home page
-                    router.push("/")
-                } catch (error) {
-                    console.error("Failed to parse user data:", error)
-                    router.push("/login?error=invalid_user_data")
-                }
-            }
+        if (error) {
+            console.error("OAuth authentication failed:", error)
+            router.replace("/login?error=" + encodeURIComponent(error))
+            return
         }
 
-        // Only run on pages that might receive OAuth callbacks
-        if (window.location.search.includes("token=") || window.location.search.includes("error=")) {
-            handleOAuthCallback()
+        if (token && userData) {
+            try {
+                const user = JSON.parse(decodeURIComponent(userData))
+                console.log("Parsed user:", user)
+
+                localStorage.setItem("token", token)
+                localStorage.setItem("connectify-user", JSON.stringify(user))
+
+                setUser(user)
+                localStorage.removeItem("oauth-mode")
+
+                console.log("Redirecting to /")
+                router.replace("/")
+            } catch (err) {
+                console.error("Failed to parse user data:", err)
+                router.replace("/login?error=invalid_user_data")
+            }
+        } else {
+            console.warn("No token or user found in query params")
         }
-    }, [setUser, router])
+    }, []) // run only once
+
 
     return null
 }
@@ -134,16 +121,16 @@ export function OAuthSuccessHandler() {
 export function OAuthButtonGroup({ mode }: { mode: "login" | "signup" }) {
     return (
         <div className="space-y-3">
-            <OAuthSuccessHandler />
             <OAuthButton provider="google" mode={mode} />
-            <OAuthButton provider="apple" mode={mode} />
 
             <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t border-muted-foreground/20" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
+          <span className="bg-background px-2 text-muted-foreground">
+            Or continue with email
+          </span>
                 </div>
             </div>
         </div>
