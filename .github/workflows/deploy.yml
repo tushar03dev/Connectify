@@ -1,11 +1,13 @@
 name: Build & Deploy Microservices to EC2
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
     paths:
       - 'backend/**'
+      - '.github/workflows/deploy.yml'
 
 jobs:
   deploy:
