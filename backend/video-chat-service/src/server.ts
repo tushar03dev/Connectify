@@ -3,7 +3,6 @@ import express, {Request, Response, NextFunction} from 'express';
 import cors from 'cors';
 import http from 'http';
 import { Server } from 'socket.io';
-import bodyParser from 'body-parser';
 import connectDB from './config/db';
 import { setupSocketIO } from './socket';
 import videoRoutes from './routes/videoRoutes';
@@ -49,8 +48,8 @@ app.use(cors({
 }));
 
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json({ limit: '500mb' }));
+app.use(express.urlencoded({ limit: '500mb', extended: true }));
 
 app.use('/', videoRoutes);
 
