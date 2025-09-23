@@ -29,10 +29,25 @@ setupSocketIO(io);
 
 connectDB();
 
+const allowedOrigins = [
+    process.env.API_GATEWAY_URL,
+    process.env.FRONTEND_URL,
+];
+
 app.use(cors({
-    origin:  [`${process.env.API_GATEWAY_URL}`, `${process.env.FRONTEND_URL}`],
+    origin: function (origin, callback) {
+        // allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
 }));
+
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));

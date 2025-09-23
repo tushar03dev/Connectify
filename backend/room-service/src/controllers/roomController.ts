@@ -45,7 +45,7 @@ export const createRoom = async (req: Request, res: Response): Promise<void> => 
         console.error(error);
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
-};
+}
 
 export const joinRoom = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -84,7 +84,7 @@ export const joinRoom = async (req: Request, res: Response): Promise<void> => {
         console.error(error);
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
-};
+}
 
 export const getRooms = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -107,7 +107,7 @@ export const getRooms = async (req: Request, res: Response): Promise<void> => {
         console.error("Error in getRooms:", error);
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
-};
+}
 
 export const deleteRoom = async (req: Request, res: Response):Promise<void> => {
     try {
