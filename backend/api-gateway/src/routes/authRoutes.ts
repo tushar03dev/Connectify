@@ -1,6 +1,6 @@
 import express from "express";
 import {
-    changePasswordRequestToAuthService,
+    changePasswordRequestToAuthService, googleCallback, googleLogin,
     otpVerificationRequestToAuthService, passwordResetRequestToAuthService,
     signInRequestToAuthService,
     signUpRequestToAuthService
@@ -18,12 +18,8 @@ router.post("/password-reset",passwordResetRequestToAuthService);
 
 router.post("/change-password",changePasswordRequestToAuthService);
 
-router.get("/google", (req, res) => {
-    res.redirect(`${process.env.AUTH_SERVICE_URL}/auth/google`);
-});
+router.get("/google", googleLogin);
 
-router.get("/auth/google/callback", (req, res) => {
-    res.redirect(`${process.env.AUTH_SERVICE_URL}/auth/google/callback${req.url}`);
-});
+router.get("/google/callback",googleCallback);
 
 export default router;

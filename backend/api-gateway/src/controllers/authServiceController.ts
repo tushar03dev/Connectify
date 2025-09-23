@@ -1,5 +1,5 @@
 import {Request, Response} from "express";
-import axios from "axios";
+import axios, {AxiosResponse} from "axios";
 import dotenv from "dotenv";
 
 const env = process.env.NODE_ENV;
@@ -115,5 +115,98 @@ export async function changePasswordRequestToAuthService(req: Request, res: Resp
         }
     } catch (error) {
         console.error("[API Gateway] Failed to reach Auth Service for change password request:", error);
+    }
+}
+
+export const googleLogin = async(req: Request, res: Response) => {
+    console.log("Google login request received");
+
+    const scope = [
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "https://www.googleapis.com/auth/userinfo.email",
+    ].join(" ");
+
+    const redirectUri = `${process.env.AUTH_SERVER_URL}/auth/google/callback`;
+    console.log("Redirect URI constructed:", redirectUri);
+
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${
+        process.env.GOOGLE_CLIENT_ID
+    }&redirect_uri=${encodeURIComponent(
+        redirectUri
+    )}&response_type=code&scope=${encodeURIComponent(scope)}`;
+
+    console.log("Redirecting user to Google Auth URL:", authUrl);
+
+    res.redirect(authUrl);
+};
+
+export const googleCallback = async(req: Request, res: Response) => {
+    console.log("Google callback hit with query params:", req.query);
+
+    const code = req.query.code as string | undefined;
+    if (!code) {
+        console.error("Missing authorization code in callback");
+        res.status(400).json({ error: "Missing authorization code" });
+        return;
+    }
+
+    try {
+        const redirectUri = `${process.env.AUTH_SERVER_URL}/auth/google/callback`;
+        console.log("Exchanging code for tokens with redirectUri:", redirectUri);
+
+        // Exchange code for access token
+        const tokenResponse: AxiosResponse<{
+            access_token: string;
+            expires_in: number;
+            refresh_token?: string;
+            id_token?: string;
+        }> = await axios.post(
+            "https://oauth2.googleapis.com/token",
+            {
+                code,
+                client_id: process.env.GOOGLE_CLIENT_ID,
+                client_secret: process.env.GOOGLE_CLIENT_SECRET,
+                redirect_uri: redirectUri,
+                grant_type: "authorization_code",
+            },
+            { headers: { "Content-Type": "application/json" } }
+        );
+
+        console.log("Token response received:", tokenResponse.data);
+
+        const { access_token } = tokenResponse.data;
+        if (!access_token) {
+            console.error("No access token received from Google");
+            res.status(500).json({ error: "Failed to get access token" });
+            return
+        }
+
+        // Fetch user info
+        console.log("Fetching user info with access_token");
+        const userInfoResponse: AxiosResponse<{
+            id: string;
+            email: string;
+            name: string;
+            picture: string;
+        }> = await axios.get("https://www.googleapis.com/oauth2/v2/userinfo", {
+            headers: { Authorization: `Bearer ${access_token}` },
+        });
+
+        console.log("User info received from Google:", userInfoResponse.data);
+
+        const response = await axios.post(`${AUTH_SERVICE_URL}/auth/save`, userInfoResponse.data);
+        if(response.data.success) {
+            // Redirect back to frontend
+            const redirectUrl = `${process.env.FRONTEND_URL}/oauth-success?token=${encodeURIComponent(
+                response.data.token
+            )}&user=${encodeURIComponent(JSON.stringify(response.data.user))}`;
+
+            console.log("Redirecting user back to frontend:", redirectUrl);
+
+            res.redirect(redirectUrl);
+        }
+    } catch (error) {
+        console.error("Error during Google authentication:", error);
+        res.status(500).send("Google authentication failed");
     }
 }

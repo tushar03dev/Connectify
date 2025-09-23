@@ -10,6 +10,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api-gateway, auth-service, room-service, video-chat-service]
 
     steps:
       - name: Checkout Repository
@@ -18,27 +21,39 @@ jobs:
       - name: Docker Login
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      - name: Detect Changed Services
-        id: changes
-        run: |
-          CHANGED_SERVICES=""
-          for service in api-gateway auth-service room-service video-chat-service; do
-            if git diff --quiet HEAD^ HEAD -- backend/$service; then
-              echo "$service unchanged"
-            else
-              CHANGED_SERVICES="$CHANGED_SERVICES $service"
-            fi
-          done
-          echo "services=$CHANGED_SERVICES" >> $GITHUB_OUTPUT
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Build & Push Changed Docker Images
-        if: steps.changes.outputs.services != ''
+      - name: Detect Changes for Service
+        id: detect
         run: |
-          for service in ${{ steps.changes.outputs.services }}; do
-            IMAGE_NAME="tushar03dev/connectify-backend:$service"
-            docker build --cache-from=$IMAGE_NAME -t $IMAGE_NAME ./backend/$service
-            docker push $IMAGE_NAME
-          done
+          git fetch origin main --depth=2
+          CHANGED=false
+          if ! git diff --quiet HEAD^ HEAD -- backend/${{ matrix.service }}; then
+            CHANGED=true
+          fi
+          echo "changed=$CHANGED" >> $GITHUB_OUTPUT
+
+      - name: Cache Docker Layers
+        if: steps.detect.outputs.changed == 'true'
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache-${{ matrix.service }}
+          key: ${{ runner.os }}-docker-${{ matrix.service }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-docker-${{ matrix.service }}-
+
+      - name: Build & Push Docker Image
+        if: steps.detect.outputs.changed == 'true'
+        run: |
+          IMAGE_NAME="tushar03dev/connectify-backend:${{ matrix.service }}"
+          docker build \
+            --cache-from=type=local,src=/tmp/.buildx-cache-${{ matrix.service }} \
+            --cache-to=type=local,dest=/tmp/.buildx-cache-${{ matrix.service }}-new,mode=max \
+            -t $IMAGE_NAME ./backend/${{ matrix.service }}
+          docker push $IMAGE_NAME
+          rm -rf /tmp/.buildx-cache-${{ matrix.service }}
+          mv /tmp/.buildx-cache-${{ matrix.service }}-new /tmp/.buildx-cache-${{ matrix.service }}
 
       - name: Setup SSH
         run: |
@@ -54,5 +69,5 @@ jobs:
             docker compose pull
             docker compose down
             docker compose up -d
-            docker image prune -af   # Cleanup unused images
+            docker image prune -af
           EOF

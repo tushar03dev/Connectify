@@ -21,8 +21,6 @@ function flattenZodError(err: ZodError) {
 const env = process.env.NODE_ENV;
 dotenv.config({path: `.env.${env}`});
 
-const redirectUri = "http://localhost:5001/auth/google/callback";
-
 export const signUp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const createPayload = req.body;
     const parsedPayload = signUpPayload.safeParse(createPayload);
@@ -207,86 +205,10 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
     }
 }
 
-export const googleLogin = (req: Request, res: Response) => {
-    console.log("Google login request received");
-
-    const scope = [
-        "https://www.googleapis.com/auth/userinfo.profile",
-        "https://www.googleapis.com/auth/userinfo.email",
-    ].join(" ");
-
-    const redirectUri = `${process.env.AUTH_SERVER_URL}/auth/google/callback`;
-    console.log("Redirect URI constructed:", redirectUri);
-
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${
-        process.env.GOOGLE_CLIENT_ID
-    }&redirect_uri=${encodeURIComponent(
-        redirectUri
-    )}&response_type=code&scope=${encodeURIComponent(scope)}`;
-
-    console.log("Redirecting user to Google Auth URL:", authUrl);
-
-    res.redirect(authUrl);
-};
-
-export const googleCallback = async(req: Request, res: Response, next: NextFunction) => {
-    console.log("Google callback hit with query params:", req.query);
-
-    const code = req.query.code as string | undefined;
-    if (!code) {
-        console.error("Missing authorization code in callback");
-        res.status(400).json({ error: "Missing authorization code" });
-        return;
-    }
-
+export const googleSave = async(req: Request, res: Response, next: NextFunction) => {
     try {
-        const redirectUri = `${process.env.AUTH_SERVER_URL}/auth/google/callback`;
-        console.log("Exchanging code for tokens with redirectUri:", redirectUri);
+        const { email, name, picture } = req.body;
 
-        // Exchange code for access token
-        const tokenResponse: AxiosResponse<{
-            access_token: string;
-            expires_in: number;
-            refresh_token?: string;
-            id_token?: string;
-        }> = await axios.post(
-            "https://oauth2.googleapis.com/token",
-            {
-                code,
-                client_id: process.env.GOOGLE_CLIENT_ID,
-                client_secret: process.env.GOOGLE_CLIENT_SECRET,
-                redirect_uri: redirectUri,
-                grant_type: "authorization_code",
-            },
-            { headers: { "Content-Type": "application/json" } }
-        );
-
-        console.log("Token response received:", tokenResponse.data);
-
-        const { access_token } = tokenResponse.data;
-        if (!access_token) {
-            console.error("No access token received from Google");
-            res.status(500).json({ error: "Failed to get access token" });
-            return
-        }
-
-        // Fetch user info
-        console.log("Fetching user info with access_token");
-        const userInfoResponse: AxiosResponse<{
-            id: string;
-            email: string;
-            name: string;
-            picture: string;
-        }> = await axios.get("https://www.googleapis.com/oauth2/v2/userinfo", {
-            headers: { Authorization: `Bearer ${access_token}` },
-        });
-
-        console.log("User info received from Google:", userInfoResponse.data);
-
-        const { email, name, picture } = userInfoResponse.data;
-
-        // Find or create user
-        console.log(`Looking up user with email: ${email}`);
         let user = await User.findOne({ email });
 
         if (!user) {
@@ -314,14 +236,7 @@ export const googleCallback = async(req: Request, res: Response, next: NextFunct
 
         console.log("JWT generated successfully");
 
-        // Redirect back to frontend
-        const redirectUrl = `http://localhost:3000/oauth-success?token=${encodeURIComponent(
-            token
-        )}&user=${encodeURIComponent(JSON.stringify(user))}`;
-
-        console.log("Redirecting user back to frontend:", redirectUrl);
-
-        res.redirect(redirectUrl);
+        res.json({success: true, token: token, user: user});
     } catch (error) {
         console.error("Error during Google authentication:", error);
         res.status(500).send("Google authentication failed");

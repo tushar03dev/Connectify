@@ -3,7 +3,7 @@ import {
     signUp,
     signIn,
     passwordReset,
-    changePassword, googleLogin, googleCallback
+    changePassword, googleSave,
 } from "../controllers/authController";
 
 const router = Router();
@@ -14,8 +14,7 @@ router.post("/sign-in", signIn);
 router.post("/password-reset", passwordReset);
 router.post("/change-password", changePassword);
 
-// Google login & signup
-router.get("/google", googleLogin);
-router.get("/google/callback", googleCallback);
+// save data
+router.post("/save", googleSave);
 
 export default router;
