@@ -20,6 +20,6 @@ router.post("/change-password",changePasswordRequestToAuthService);
 
 router.get("/google", googleLogin);
 
-router.get("/auth/google/callback",googleCallback);
+router.get("/google/callback",googleCallback);
 
 export default router;

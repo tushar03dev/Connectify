@@ -8,38 +8,63 @@ on:
       - 'backend/**'
 
 jobs:
-  deploy:
+  detect-changes:
     runs-on: ubuntu-latest
-
+    outputs:
+      api-gateway: ${{ steps.filter.outputs.api-gateway }}
+      auth-service: ${{ steps.filter.outputs.auth-service }}
+      room-service: ${{ steps.filter.outputs.room-service }}
+      video-chat-service: ${{ steps.filter.outputs.video-chat-service }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+
+      - name: Detect changed services
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            api-gateway:
+              - 'backend/api-gateway/**'
+            auth-service:
+              - 'backend/auth-service/**'
+            room-service:
+              - 'backend/room-service/**'
+            video-chat-service:
+              - 'backend/video-chat-service/**'
+
+  build:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api-gateway, auth-service, room-service, video-chat-service]
+      max-parallel: 2
+    if: needs.detect-changes.outputs[matrix.service] == 'true'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Docker Login
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Detect Changed Services
-        id: changes
-        run: |
-          CHANGED_SERVICES=""
-          for service in api-gateway auth-service room-service video-chat-service; do
-            if git diff --quiet HEAD^ HEAD -- backend/$service; then
-              echo "$service unchanged"
-            else
-              CHANGED_SERVICES="$CHANGED_SERVICES $service"
-            fi
-          done
-          echo "services=$CHANGED_SERVICES" >> $GITHUB_OUTPUT
+      - name: Build & Push ${{ matrix.service }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend/${{ matrix.service }}
+          push: true
+          tags: tushar03dev/connectify-backend:${{ matrix.service }}
+          cache-from: type=registry,ref=tushar03dev/connectify-backend:${{ matrix.service }}-cache
+          cache-to: type=registry,ref=tushar03dev/connectify-backend:${{ matrix.service }}-cache,mode=max
 
-      - name: Build & Push Changed Docker Images
-        if: steps.changes.outputs.services != ''
-        run: |
-          for service in ${{ steps.changes.outputs.services }}; do
-            IMAGE_NAME="tushar03dev/connectify-backend:$service"
-            docker build --cache-from=$IMAGE_NAME -t $IMAGE_NAME ./backend/$service
-            docker push $IMAGE_NAME
-          done
-
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -47,12 +72,22 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy to EC2
+      - name: Deploy changed services to EC2
         run: |
           ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             cd ${{ secrets.DEPLOY_DIR }}
-            docker compose pull
-            docker compose down
-            docker compose up -d
+          
+            # Pull only changed images
+            for service in api-gateway auth-service room-service video-chat-service; do
+              IMAGE="tushar03dev/connectify-backend:$service"
+              if docker manifest inspect $IMAGE >/dev/null 2>&1; then
+                echo "Updating $service..."
+                docker compose pull $service
+                docker compose up -d $service
+              else
+                echo "No new image for $service, skipping..."
+              fi
+            done
+
             docker image prune -af   # Cleanup unused images
           EOF
