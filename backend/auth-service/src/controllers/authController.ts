@@ -21,8 +21,6 @@ function flattenZodError(err: ZodError) {
 const env = process.env.NODE_ENV;
 dotenv.config({path: `.env.${env}`});
 
-const redirectUri = "http://localhost:5001/auth/google/callback";
-
 export const signUp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const createPayload = req.body;
     const parsedPayload = signUpPayload.safeParse(createPayload);
@@ -315,7 +313,7 @@ export const googleCallback = async(req: Request, res: Response, next: NextFunct
         console.log("JWT generated successfully");
 
         // Redirect back to frontend
-        const redirectUrl = `http://localhost:3000/oauth-success?token=${encodeURIComponent(
+        const redirectUrl = `${process.env.FRONTEND_URL}/oauth-success?token=${encodeURIComponent(
             token
         )}&user=${encodeURIComponent(JSON.stringify(user))}`;
 
