@@ -47,7 +47,6 @@ export const createRoom = async (req: Request, res: Response): Promise<void> => 
     }
 };
 
-
 export const joinRoom = async (req: Request, res: Response): Promise<void> => {
     try {
         const { code, userId } = req.body;
@@ -87,27 +86,28 @@ export const joinRoom = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
-
-export const getRooms = async (req: Request, res: Response):Promise<void> => {
+export const getRooms = async (req: Request, res: Response): Promise<void> => {
     try {
-        const userId  = req.params.userId;
-        if(!userId) {
-            res.status(400).json({success: false, message: 'User ID is required'});
+        const userId = req.params.userId;
+        if (!userId) {
+            res.status(400).json({ success: false, message: 'User ID is required' });
             return;
         }
 
-        const user = await User.findOne({email: userId}).populate('rooms');
+        const user = await User.findOne({email:userId});
         if (!user) {
-            res.status(404).json({success: false, message: 'User not found'});
+            res.status(404).json({ success: false, message: 'User not found' });
             return;
         }
 
-        res.status(200).json({success: true, rooms: user.rooms});
+        const rooms = await Room.find({members : user._id});
+
+        res.status(200).json({ success: true, rooms: rooms });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({success: false, message: 'Internal server error'});
+        console.error("Error in getRooms:", error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
     }
-}
+};
 
 export const deleteRoom = async (req: Request, res: Response):Promise<void> => {
     try {

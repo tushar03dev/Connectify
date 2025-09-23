@@ -116,46 +116,51 @@ export default function RoomsPage() {
               <h2 className="text-xl font-semibold">Recent Rooms</h2>
               {rooms.length > 0 ? (
                   <div className="space-y-4">
-                    {rooms.map((room) => (
-                        <Card key={room.code} className="relative">
-                          {/* Delete Button */}
-                          <button
-                              onClick={() => handleDeleteClick(room._id)}
-                              className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-full bg-muted hover:bg-white transition-colors duration-200"
-                          >
-                            <X
-                                className="w-4 h-4 text-white text-muted-foreground hover:text-red-500 transition-colors duration-200"
-                                strokeWidth={2.5}
-                            />
-                          </button>
+                    {rooms.map((room) => {
+                      // Ensure members array exists
+                      const membersCount = Array.isArray(room.members) ? room.members.length : 0;
 
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center space-x-4">
-                                <div className="rounded-full bg-primary/10 p-2">
-                                  <Video className="h-5 w-5 text-primary" />
+                      return (
+                          <Card key={room._id || room.code} className="relative">
+                            {/* Delete Button */}
+                            <button
+                                onClick={() => handleDeleteClick(room._id)}
+                                className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-full bg-muted hover:bg-white transition-colors duration-200"
+                            >
+                              <X
+                                  className="w-4 h-4 text-white text-muted-foreground hover:text-red-500 transition-colors duration-200"
+                                  strokeWidth={2.5}
+                              />
+                            </button>
+
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center space-x-4">
+                                  <div className="rounded-full bg-primary/10 p-2">
+                                    <Video className="h-5 w-5 text-primary" />
+                                  </div>
+                                  <div>
+                                    <h3 className="font-medium">{room?.name || "Unnamed Room"}</h3>
+                                    <p className="text-sm text-muted-foreground">
+                                      {membersCount} participant{membersCount === 1 ? "" : "s"}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <h3 className="font-medium">{room.name}</h3>
-                                  <p className="text-sm text-muted-foreground">
-                                    {room.members.length} participants
-                                  </p>
-                                </div>
+                                <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      router.push(`/rooms/${room.code}`);
+                                      setSelectedRoom(room);
+                                    }}
+                                    className="transform -translate-x-7"
+                                >
+                                  Join
+                                </Button>
                               </div>
-                              <Button
-                                  size="sm"
-                                  onClick={() => {
-                                    router.push(`/rooms/${room.code}`)
-                                    setSelectedRoom(room)
-                                  }}
-                                  className="transform -translate-x-7"
-                              >
-                                Join
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                    ))}
+                            </CardContent>
+                          </Card>
+                      );
+                    })}
                   </div>
               ) : (
                   <Card>
