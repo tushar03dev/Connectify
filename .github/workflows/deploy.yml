@@ -44,7 +44,7 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          printf "%s\n" "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
@@ -52,9 +52,8 @@ jobs:
         run: |
           ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             cd ${{ secrets.DEPLOY_DIR }}
-            git pull origin main
-            sudo docker compose -f docker-compose.yml pull
-            sudo docker compose -f docker-compose.yml down
-            sudo docker compose -f docker-compose.yml up -d
-            sudo docker image prune -af
+            docker compose pull
+            docker compose down
+            docker compose up -d
+            docker image prune -af   # Cleanup unused images
           EOF
