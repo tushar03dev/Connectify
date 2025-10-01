@@ -1,6 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
-import createClient from "ioredis";
+import Redis from "ioredis";
 import jwt from "jsonwebtoken";
 import { Room } from "./models/roomModel";
 import { User } from "./models/userModel";
@@ -49,12 +49,23 @@ interface ProgressBarClickedPayload {
 export const setupSocketIO = async (io: Server) => {
     console.debug("Setting up Socket.IO server");
 
-    // 🔥 Connect to Redis
-    const pubClient = new createClient({host: "redis", port: 6379});
-    const subClient = new createClient({host: "redis", port: 6379});
 
-    await pubClient.connect();
-    await subClient.connect();
+    const pubClient = new Redis({
+        host: process.env.REDIS_HOST,
+        port: Number(process.env.REDIS_PORT),
+        maxRetriesPerRequest: 5, // optional, default 20
+        retryStrategy: (times) => Math.min(times * 50, 2000), // exponential backoff
+    });
+
+    const subClient = pubClient.duplicate();
+
+    // 🔹 Attach error handlers
+    pubClient.on("error", (err) => {
+        console.error("Redis pubClient error:", err);
+    });
+    subClient.on("error", (err) => {
+        console.error("Redis subClient error:", err);
+    });
 
     io.adapter(createAdapter(pubClient, subClient));
 
