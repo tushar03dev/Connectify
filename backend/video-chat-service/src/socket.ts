@@ -1,4 +1,6 @@
 import { Server, Socket } from "socket.io";
+import { createAdapter } from "@socket.io/redis-adapter";
+import createClient from "ioredis";
 import jwt from "jsonwebtoken";
 import { Room } from "./models/roomModel";
 import { User } from "./models/userModel";
@@ -44,12 +46,17 @@ interface ProgressBarClickedPayload {
     videoUrl: string;
 }
 
-interface VideoUploadedPayload {
-    roomId: string;
-}
-
 export const setupSocketIO = async (io: Server) => {
     console.debug("Setting up Socket.IO server");
+
+    // 🔥 Connect to Redis
+    const pubClient = new createClient({host: "redis", port: 6379});
+    const subClient = pubClient.duplicate();
+
+    await pubClient.connect();
+    await subClient.connect();
+
+    io.adapter(createAdapter(pubClient, subClient));
 
     io.use((socket: AuthenticatedSocket, next) => {
         console.debug("Authenticating socket connection", { socketId: socket.id });

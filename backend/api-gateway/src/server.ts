@@ -14,10 +14,21 @@ const env = process.env.NODE_ENV;
 dotenv.config({ path: `.env.${env}` });
 console.log(`.env.${env}`);
 
+const servers = [
+    process.env.VIDEO_SERVER_1,
+    process.env.VIDEO_SERVER_2,
+    process.env.VIDEO_SERVER_3
+];
 
-const chatServerTarget = process.env.VIDEO_SERVER_URL;
+let current = 0;
+function getNextServer() {
+    const target = servers[current];
+    current = (current + 1) % servers.length;
+    return target;
+}
+
 const videoProxyOptions: Options = {
-    target: process.env.VIDEO_SERVER_URL,
+    target: getNextServer(),
     changeOrigin: true,
     pathRewrite: {
         '^/video/play': '/play',
@@ -44,7 +55,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 });
 
 const socketProxy = createProxyMiddleware({
-    target: chatServerTarget,
+    target: getNextServer(),
     changeOrigin: true,
     ws: true,
     pathRewrite: {
