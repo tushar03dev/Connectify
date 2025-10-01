@@ -21,7 +21,9 @@ services:
     depends_on:
       - auth-service
       - room-service
-      - video-chat-service
+      - video-chat-service-1
+      - video-chat-service-2
+      - video-chat-service-3
     env_file:
       - .env.api-gateway
     networks:
