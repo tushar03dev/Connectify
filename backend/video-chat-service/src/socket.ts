@@ -51,7 +51,7 @@ export const setupSocketIO = async (io: Server) => {
 
     // 🔥 Connect to Redis
     const pubClient = new createClient({host: "redis", port: 6379});
-    const subClient = pubClient.duplicate();
+    const subClient = new createClient({host: "redis", port: 6379});
 
     await pubClient.connect();
     await subClient.connect();
