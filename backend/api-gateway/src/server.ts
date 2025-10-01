@@ -39,8 +39,9 @@ const videoProxyOptions: Options = {
 const app = express();
 
 app.use(cors({
-    origin: "*",
-    credentials: true,
+    origin: process.env.FRONTEND_URL,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true, // if you send cookies or Authorization headers
 }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
