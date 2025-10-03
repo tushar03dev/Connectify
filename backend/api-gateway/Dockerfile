@@ -1,12 +1,11 @@
 # Stage 1: Build TypeScript
-FROM node:18-alpine AS builder
+FROM node:18 AS builder
 
+# Create app directory
 WORKDIR /app
 
-# Copy only package files first
+# Copy package files and install deps
 COPY package*.json ./
-
-# Install dependencies (only needed for build)
 RUN npm install
 
 # Copy source code
@@ -16,17 +15,20 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Production image
-FROM node:18-alpine
+FROM node:18-slim
 
-WORKDIR /app
+# Set working directory
+WORKDIR /src
 
-# Copy only compiled output and production dependencies
+# Only copy compiled output and necessary files
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
 
-# Install only production deps
-RUN npm install --production
+# Install devs
+RUN npm install
 
+# App port
 EXPOSE 5000
 
-CMD ["node", "dist/index.js"]
+# Start app
+CMD ["npm", "start"]
