@@ -78,15 +78,13 @@ services:
       - app-network
 
   mongo:
-    image: mongo:7.0
-    container_name: mongo
-    restart: unless-stopped
+    image: mongo:6.0
+    container_name: mongo_container
+    restart: always
     ports:
       - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: "root"
-      MONGO_INITDB_ROOT_PASSWORD: "secret123"
-      MONGO_INITDB_DATABASE: "connectify"
+    env_file:
+      - .env.mongo
     volumes:
       - mongo_data:/data/db
     networks:
