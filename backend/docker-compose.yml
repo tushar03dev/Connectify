@@ -83,16 +83,19 @@ services:
     restart: unless-stopped
     ports:
       - "27017:27017"
+    env_file:
+      - .env.mongo
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGO_DATABASE}
     volumes:
       - mongo_data:/data/db
-    env_file:
-      - .env.mongo
     networks:
       - app-network
+
+volumes:
+  mongo_data:
 
 networks:
   app-network:
