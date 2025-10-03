@@ -151,7 +151,7 @@ export const googleCallback = async(req: Request, res: Response) => {
     }
 
     try {
-        const redirectUri = `${process.env.AUTH_SERVER_URL}/auth/google/callback`;
+        const redirectUri = `${process.env.SERVER_URL}/auth/google/callback`;
         console.log("Exchanging code for tokens with redirectUri:", redirectUri);
 
         // Exchange code for access token
