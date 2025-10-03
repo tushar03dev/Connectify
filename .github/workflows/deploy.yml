@@ -52,7 +52,7 @@ jobs:
 
       - name: Deploy to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=10 -o ServerAliveCountMax=3 ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             cd ${{ secrets.DEPLOY_DIR }}
             docker compose pull
             docker compose down
@@ -63,17 +63,17 @@ jobs:
             # Wait until services are healthy
             echo "Waiting for Mongo to be healthy..."
             until [ "$(docker inspect --format='{{.State.Health.Status}}' $(docker compose ps -q mongo))" = "healthy" ]; do
-              sleep 5
+              sleep 2
             done
           
             echo "Waiting for Redis to be healthy..."
             until [ "$(docker inspect --format='{{.State.Health.Status}}' $(docker compose ps -q redis))" = "healthy" ]; do
-              sleep 5
+              sleep 2
             done
           
             echo "Waiting for RabbitMQ to be healthy..."
             until [ "$(docker inspect --format='{{.State.Health.Status}}' $(docker compose ps -q rabbitmq))" = "healthy" ]; do
-              sleep 5
+              sleep 2
             done
           
             echo "Core services are healthy. Starting application services..."
