@@ -56,6 +56,28 @@ jobs:
             cd ${{ secrets.DEPLOY_DIR }}
             docker compose pull
             docker compose down
-            docker compose up -d
-            docker image prune -af   # Cleanup unused images
+          
+            # Start core services first
+            docker compose up -d mongo redis rabbitmq
+          
+            # Wait until services are healthy
+            echo "Waiting for Mongo to be healthy..."
+            until [ "$(docker inspect --format='{{.State.Health.Status}}' $(docker compose ps -q mongo))" = "healthy" ]; do
+              sleep 5
+            done
+          
+            echo "Waiting for Redis to be healthy..."
+            until [ "$(docker inspect --format='{{.State.Health.Status}}' $(docker compose ps -q redis))" = "healthy" ]; do
+              sleep 5
+            done
+          
+            echo "Waiting for RabbitMQ to be healthy..."
+            until [ "$(docker inspect --format='{{.State.Health.Status}}' $(docker compose ps -q rabbitmq))" = "healthy" ]; do
+              sleep 5
+            done
+          
+            echo "Core services are healthy. Starting application services..."
+            docker compose up -d auth-service room-service video-chat-service-1 video-chat-service-2 video-chat-service-3 api-gateway
+          
+            docker image prune -af
           EOF
