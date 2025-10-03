@@ -40,11 +40,12 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
       interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 5s
+      retries: 20
+      start_period: 30s
+
 
   api-gateway:
     image: tushar03dev/connectify-backend:api-gateway

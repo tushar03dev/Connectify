@@ -60,9 +60,16 @@ jobs:
             # Start core services first
             docker compose up -d mongo redis rabbitmq
           
-            # Wait until services are healthy
+            # Wait for container ID first
+            MONGO_CONTAINER=$(docker compose ps -q mongo)
+            while [ -z "$MONGO_CONTAINER" ]; do
+              sleep 1
+              MONGO_CONTAINER=$(docker compose ps -q mongo)
+            done
+          
+            # Wait until healthy
             echo "Waiting for Mongo to be healthy..."
-            until [ "$(docker inspect --format='{{.State.Health.Status}}' $(docker compose ps -q mongo))" = "healthy" ]; do
+            until [ "$(docker inspect --format='{{.State.Health.Status}}' $MONGO_CONTAINER 2>/dev/null)" = "healthy" ]; do
               sleep 2
             done
           
