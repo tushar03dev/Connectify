@@ -41,7 +41,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 });
 
 // Start the server
-const PORT = process.env.PORT;
+const PORT = process.env.AUTH_SERVICE_PORT;
 
 app.listen(PORT, () => {
     console.log(`Auth Server is running on http://localhost:${PORT}`);

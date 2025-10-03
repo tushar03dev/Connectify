@@ -68,7 +68,7 @@ const socketProxy = createProxyMiddleware({
 app.use(socketProxy);
 
 // Start HTTP server
-const PORT = process.env.PORT;
+const PORT = process.env.API_GATEWAY_PORT;
 const server = http.createServer(app);
 
 // Start listening

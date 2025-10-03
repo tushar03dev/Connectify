@@ -58,7 +58,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     res.status(500).json({ message: 'Internal server error' });
 });
 
-const PORT = process.env.PORT;
+const PORT = process.env.VIDEO_CHAT_SERVICE_PORT;
 
 server.listen(PORT, () => {
     console.log(`Video Service running on http://localhost:${PORT}`);
