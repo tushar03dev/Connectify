@@ -58,11 +58,11 @@ jobs:
             docker compose down
 
             # Start core services first
-            docker compose up -d mongo redis rabbitmq
+            docker compose up -d redis rabbitmq
 
             # Wait fixed time for services to start
-            echo "Waiting 60 seconds for core services to start..."
-            sleep 60
+            echo "Waiting 20 seconds for core services to start..."
+            sleep 20
 
             echo "Starting application services..."
             docker compose up -d auth-service room-service video-chat-service-1 video-chat-service-2 video-chat-service-3 api-gateway

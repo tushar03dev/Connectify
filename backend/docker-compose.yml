@@ -16,19 +16,6 @@ services:
     networks:
       - app-network
 
-  mongo:
-    image: mongo:6.0
-    ports:
-      - "27017:27017"
-    restart: always
-    env_file:
-      - .env.production
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - app-network
-
-
   api-gateway:
     image: tushar03dev/connectify-backend:api-gateway
     ports:
