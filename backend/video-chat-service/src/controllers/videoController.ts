@@ -4,6 +4,7 @@ import { Video } from "../models/videoModel";
 import { Room } from "../models/roomModel";
 import {deleteFromS3, getObjectURL, uploadToS3} from "../utils/s3Utils";
 import axios from "axios";
+import {User} from "../models/userModel";
 
 const env = process.env.NODE_ENV;
 dotenv.config({ path: `.env.${env}` });
@@ -26,6 +27,12 @@ export const uploadVideo = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
+        const user = await User.findOne({email: req.body.userId});
+        if (!user) {
+            res.status(404).json({ error: "User not found" });
+            return;
+        }
+
         const s3Key = `${Date.now()}-${file.originalname}`; // Unique key with timestamp
         const contentType = file.mimetype;
 
@@ -40,6 +47,7 @@ export const uploadVideo = async (req: Request, res: Response): Promise<void> =>
             roomId: room._id,
             contentType: contentType,
             size: file.size,
+            username: user.name,
             uploadDate: new Date(),
         });
 

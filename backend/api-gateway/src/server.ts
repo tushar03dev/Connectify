@@ -14,10 +14,21 @@ const env = process.env.NODE_ENV;
 dotenv.config({ path: `.env.${env}` });
 console.log(`.env.${env}`);
 
+const servers = [
+    process.env.VIDEO_SERVER_1,
+    process.env.VIDEO_SERVER_2,
+    process.env.VIDEO_SERVER_3
+];
 
-const chatServerTarget = process.env.VIDEO_SERVER_URL;
+let current = 0;
+function getNextServer() {
+    const target = servers[current];
+    current = (current + 1) % servers.length;
+    return target;
+}
+
 const videoProxyOptions: Options = {
-    target: process.env.VIDEO_SERVER_URL,
+    target: getNextServer(),
     changeOrigin: true,
     pathRewrite: {
         '^/video/play': '/play',
@@ -28,8 +39,9 @@ const videoProxyOptions: Options = {
 const app = express();
 
 app.use(cors({
-    origin: "*",
-    credentials: true,
+    origin: process.env.FRONTEND_URL,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true, // if you send cookies or Authorization headers
 }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -44,7 +56,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 });
 
 const socketProxy = createProxyMiddleware({
-    target: chatServerTarget,
+    target: getNextServer(),
     changeOrigin: true,
     ws: true,
     pathRewrite: {
@@ -56,7 +68,7 @@ const socketProxy = createProxyMiddleware({
 app.use(socketProxy);
 
 // Start HTTP server
-const PORT = process.env.PORT;
+const PORT = process.env.API_GATEWAY_PORT;
 const server = http.createServer(app);
 
 // Start listening

@@ -59,7 +59,7 @@ interface Message {
 interface VideoItem {
     _id: string
     originalName: string
-    uploadedBy?: string
+    username: string
     uploadedByName?: string
 }
 
@@ -197,7 +197,7 @@ const VideoList: React.FC<VideoListProps> = ({
                                     <div>
                                         <h3 className="font-medium text-slate-900 dark:text-white">{video.originalName}</h3>
                                         <p className="text-sm text-slate-600 dark:text-slate-400">
-                                            Shared by {video.uploadedByName || "Unknown User"}
+                                            Shared by {video.username || "Unknown User"}
                                         </p>
                                     </div>
                                 </div>

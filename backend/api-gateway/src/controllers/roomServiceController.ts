@@ -62,12 +62,11 @@ export async function getRooms(req: AuthRequest, res: Response): Promise<void> {
 
         const response = await axios.get(`${CHAT_SERVICE_URL}/rooms/get-rooms/${userId}`)
 
-        if (response.status === 200) {
-            res.status(200).json({ success: true, rooms: response.data.rooms });
-        } else {
-            res.status(500).json({ success: false, error: "Failed to send message." });
+        if (response.data.success) {
+            res.status(200).json({ rooms: response.data.rooms });
         }
     } catch (error) {
+        res.status(500).json({ success: false, error: "Failed to send message." });
         console.error("[API Gateway] Failed to reach Chat Service for retrieving rooms:", error);
     }
 }

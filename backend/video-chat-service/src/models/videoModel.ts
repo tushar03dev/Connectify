@@ -7,6 +7,7 @@ export interface IVideo extends Document {
     roomId: mongoose.Types.ObjectId;
     contentType: string;
     size: number;
+    username: string;
     uploadDate: Date;
 }
 
@@ -17,6 +18,7 @@ const VideoSchema = new mongoose.Schema<IVideo>(
         filePath: { type: String, required: true, unique: true }, // S3 key, unique to prevent duplicates
         roomId: { type: Schema.Types.ObjectId, ref: 'Room', required: true },
         contentType: { type: String, required: true }, // MIME type of the video
+        username: { type: String, required: true },
         size: { type: Number, required: true }, // File size in bytes
     },
     {

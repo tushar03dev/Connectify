@@ -11,6 +11,7 @@ type Video = {
     originalName: string
     room: string
     filePath: string
+    username: string
     streamingUrl: string
 }
 

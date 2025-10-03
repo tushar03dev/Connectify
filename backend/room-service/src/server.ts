@@ -33,7 +33,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     res.status(500).json({ message: 'Something went wrong!' });
 });
 
-const PORT = process.env.PORT;
+const PORT = process.env.ROOM_SERVICE_PORT;
 
 app.listen(PORT, () => {
     console.log(`Room Server is running on http://localhost:${PORT}`);

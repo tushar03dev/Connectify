@@ -3,7 +3,6 @@ import express, {Request, Response, NextFunction} from 'express';
 import cors from 'cors';
 import http from 'http';
 import { Server } from 'socket.io';
-import bodyParser from 'body-parser';
 import connectDB from './config/db';
 import { setupSocketIO } from './socket';
 import videoRoutes from './routes/videoRoutes';
@@ -29,13 +28,28 @@ setupSocketIO(io);
 
 connectDB();
 
+const allowedOrigins = [
+    process.env.API_GATEWAY_URL,
+    process.env.FRONTEND_URL,
+];
+
 app.use(cors({
-    origin:  [`${process.env.API_GATEWAY_URL}`, `${process.env.FRONTEND_URL}`],
+    origin: function (origin, callback) {
+        // allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
 }));
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use(express.json({ limit: '500mb' }));
+app.use(express.urlencoded({ limit: '500mb', extended: true }));
 
 app.use('/', videoRoutes);
 
@@ -44,7 +58,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     res.status(500).json({ message: 'Internal server error' });
 });
 
-const PORT = process.env.PORT;
+const PORT = process.env.VIDEO_CHAT_SERVICE_PORT;
 
 server.listen(PORT, () => {
     console.log(`Video Service running on http://localhost:${PORT}`);
