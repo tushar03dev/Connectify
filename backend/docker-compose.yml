@@ -6,12 +6,6 @@ services:
       - "6379:6379"
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
 
   rabbitmq:
     image: rabbitmq:3-alpine
@@ -21,12 +15,6 @@ services:
       - "15672:15672"
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
 
   mongo:
     image: mongo:6.0
@@ -39,12 +27,6 @@ services:
       - mongo_data:/data/db
     networks:
       - app-network
-    healthcheck:
-      test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 30s
 
 
   api-gateway:
@@ -53,16 +35,11 @@ services:
       - "5000:5000"
     restart: always
     depends_on:
-      auth-service:
-        condition: service_healthy
-      room-service:
-        condition: service_healthy
-      video-chat-service-1:
-        condition: service_healthy
-      video-chat-service-2:
-        condition: service_healthy
-      video-chat-service-3:
-        condition: service_healthy
+     - auth-service
+     - room-service
+     - video-chat-service-1
+     - video-chat-service-2
+     - video-chat-service-3
     env_file:
       - .env.production
     networks:
@@ -74,22 +51,13 @@ services:
       - "5001:5001"
     restart: always
     depends_on:
-      mongo:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
+     - mongo
+     - redis
+     - rabbitmq
     env_file:
       - .env.production
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
 
   room-service:
     image: tushar03dev/connectify-backend:room-service
@@ -97,18 +65,11 @@ services:
       - "5002:5002"
     restart: always
     depends_on:
-      mongo:
-        condition: service_healthy
+     - mongo
     env_file:
       - .env.production
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
 
   video-chat-service-1:
     image: tushar03dev/connectify-backend:video-chat-service
@@ -116,18 +77,11 @@ services:
       - "5003:5003"
     restart: always
     depends_on:
-      mongo:
-        condition: service_healthy
+     - mongo
     env_file:
       - .env.production
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
 
   video-chat-service-2:
     image: tushar03dev/connectify-backend:video-chat-service
@@ -141,12 +95,6 @@ services:
       - .env.production
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
 
   video-chat-service-3:
     image: tushar03dev/connectify-backend:video-chat-service
@@ -154,18 +102,11 @@ services:
       - "5005:5003"
     restart: always
     depends_on:
-      mongo:
-        condition: service_healthy
+      - mongo
     env_file:
       - .env.production
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
 
 volumes:
   mongo_data:
