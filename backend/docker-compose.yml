@@ -34,12 +34,6 @@ services:
     ports:
       - "5000:5000"
     restart: always
-    depends_on:
-     - auth-service
-     - room-service
-     - video-chat-service-1
-     - video-chat-service-2
-     - video-chat-service-3
     env_file:
       - .env.production
     networks:
@@ -50,10 +44,6 @@ services:
     ports:
       - "5001:5001"
     restart: always
-    depends_on:
-     - mongo
-     - redis
-     - rabbitmq
     env_file:
       - .env.production
     networks:
@@ -64,8 +54,6 @@ services:
     ports:
       - "5002:5002"
     restart: always
-    depends_on:
-     - mongo
     env_file:
       - .env.production
     networks:
@@ -76,8 +64,6 @@ services:
     ports:
       - "5003:5003"
     restart: always
-    depends_on:
-     - mongo
     env_file:
       - .env.production
     networks:
@@ -88,9 +74,6 @@ services:
     restart: always
     ports:
       - "5004:5003"
-    depends_on:
-      mongo:
-        condition: service_healthy
     env_file:
       - .env.production
     networks:
@@ -101,8 +84,6 @@ services:
     ports:
       - "5005:5003"
     restart: always
-    depends_on:
-      - mongo
     env_file:
       - .env.production
     networks:
