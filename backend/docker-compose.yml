@@ -1,6 +1,7 @@
 services:
   redis:
     image: redis:7-alpine
+    restart: always
     ports:
       - "6379:6379"
     networks:
@@ -14,6 +15,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-alpine
+    restart: always
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -30,6 +32,7 @@ services:
     image: mongo:6.0
     ports:
       - "27017:27017"
+    restart: always
     env_file:
       - .env.mongo
     volumes:
@@ -47,6 +50,7 @@ services:
     image: tushar03dev/connectify-backend:api-gateway
     ports:
       - "5000:5000"
+    restart: always
     depends_on:
       mongo:
         condition: service_healthy
@@ -69,6 +73,7 @@ services:
     image: tushar03dev/connectify-backend:auth-service
     ports:
       - "5001:5001"
+    restart: always
     depends_on:
       mongo:
         condition: service_healthy
@@ -91,6 +96,7 @@ services:
     image: tushar03dev/connectify-backend:room-service
     ports:
       - "5002:5002"
+    restart: always
     depends_on:
       mongo:
         condition: service_healthy
@@ -109,6 +115,7 @@ services:
     image: tushar03dev/connectify-backend:video-chat-service
     ports:
       - "5003:5003"
+    restart: always
     depends_on:
       mongo:
         condition: service_healthy
@@ -125,6 +132,7 @@ services:
 
   video-chat-service-2:
     image: tushar03dev/connectify-backend:video-chat-service
+    restart: always
     ports:
       - "5004:5003"
     depends_on:
@@ -145,6 +153,7 @@ services:
     image: tushar03dev/connectify-backend:video-chat-service
     ports:
       - "5005:5003"
+    restart: always
     depends_on:
       mongo:
         condition: service_healthy
