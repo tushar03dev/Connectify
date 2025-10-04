@@ -25,16 +25,8 @@ const videoProxyOptions: Options = {
 
 const app = express();
 
-const allowedOrigins = [process.env.FRONTEND_URL];
-
 app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error("Not allowed by CORS: " + origin));
-        }
-    },
+    origin: process.env.FRONTEND_URL,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
 }));
