@@ -20,6 +20,10 @@ services:
     image: tushar03dev/connectify-backend:api-gateway
     ports:
       - "5000:5000"
+    depends_on:
+      - auth-service
+      - video-chat-service
+      - room-service
     restart: always
     env_file:
       - .env.production
@@ -31,6 +35,9 @@ services:
     ports:
       - "5001:5001"
     restart: always
+    depends_on:
+      - rabbitmq
+      - redis
     env_file:
       - .env.production
     networks:
@@ -46,30 +53,10 @@ services:
     networks:
       - app-network
 
-  video-chat-service-1:
+  video-chat-service:
     image: tushar03dev/connectify-backend:video-chat-service
     ports:
       - "5003:5003"
-    restart: always
-    env_file:
-      - .env.production
-    networks:
-      - app-network
-
-  video-chat-service-2:
-    image: tushar03dev/connectify-backend:video-chat-service
-    restart: always
-    ports:
-      - "5004:5003"
-    env_file:
-      - .env.production
-    networks:
-      - app-network
-
-  video-chat-service-3:
-    image: tushar03dev/connectify-backend:video-chat-service
-    ports:
-      - "5005:5003"
     restart: always
     env_file:
       - .env.production
