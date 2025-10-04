@@ -1,6 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
-import cors from 'cors';
 import bodyParser from 'body-parser';
 import http from 'http';
 import authRoutes from './routes/authRoutes';
@@ -24,12 +23,6 @@ const videoProxyOptions: Options = {
 } as any;
 
 const app = express();
-
-app.use(cors({
-    origin: process.env.FRONTEND_URL,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    credentials: true,
-}));
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
