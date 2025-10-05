@@ -126,7 +126,7 @@ export const googleLogin = async(req: Request, res: Response) => {
         "https://www.googleapis.com/auth/userinfo.email",
     ].join(" ");
 
-    const redirectUri = `${process.env.AUTH_SERVER_URL}/auth/google/callback`;
+    const redirectUri = `${process.env.SERVER_URL}/auth/google/callback`;
     console.log("Redirect URI constructed:", redirectUri);
 
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${
