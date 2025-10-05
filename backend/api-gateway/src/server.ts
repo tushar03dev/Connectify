@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import bodyParser from 'body-parser';
 import http from 'http';
+import cors from 'cors';
 import authRoutes from './routes/authRoutes';
 import roomRoutes from './routes/roomRoutes';
 import { Duplex } from 'stream';
@@ -23,6 +24,12 @@ const videoProxyOptions: Options = {
 } as any;
 
 const app = express();
+
+app.use(cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true
+}));
+console.log(process.env.FRONTEND_URL);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
