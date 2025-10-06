@@ -1,8 +1,8 @@
 import express, { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
-import cors from 'cors';
 import bodyParser from 'body-parser';
 import http from 'http';
+import cors from 'cors';
 import authRoutes from './routes/authRoutes';
 import roomRoutes from './routes/roomRoutes';
 import { Duplex } from 'stream';
@@ -14,21 +14,8 @@ const env = process.env.NODE_ENV;
 dotenv.config({ path: `.env.${env}` });
 console.log(`.env.${env}`);
 
-const servers = [
-    process.env.VIDEO_SERVER_1,
-    process.env.VIDEO_SERVER_2,
-    process.env.VIDEO_SERVER_3
-];
-
-let current = 0;
-function getNextServer() {
-    const target = servers[current];
-    current = (current + 1) % servers.length;
-    return target;
-}
-
 const videoProxyOptions: Options = {
-    target: getNextServer(),
+    target: process.env.VIDEO_SERVER_URL,
     changeOrigin: true,
     pathRewrite: {
         '^/video/play': '/play',
@@ -40,9 +27,10 @@ const app = express();
 
 app.use(cors({
     origin: process.env.FRONTEND_URL,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    credentials: true, // if you send cookies or Authorization headers
+    credentials: true
 }));
+console.log(process.env.FRONTEND_URL);
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -56,7 +44,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 });
 
 const socketProxy = createProxyMiddleware({
-    target: getNextServer(),
+    target: process.env.VIDEO_SERVER_URL,
     changeOrigin: true,
     ws: true,
     pathRewrite: {

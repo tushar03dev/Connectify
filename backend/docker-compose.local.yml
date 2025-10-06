@@ -17,7 +17,9 @@ services:
       - app-network
 
   api-gateway:
-    image: tushar03dev/connectify-backend:api-gateway
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
     ports:
       - "5000:5000"
     depends_on:
@@ -26,12 +28,14 @@ services:
       - room-service
     restart: always
     env_file:
-      - .env.production
+      - .env.local
     networks:
       - app-network
 
   auth-service:
-    image: tushar03dev/connectify-backend:auth-service
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
     ports:
       - "5001:5001"
     restart: always
@@ -39,27 +43,31 @@ services:
       - rabbitmq
       - redis
     env_file:
-      - .env.production
+      - .env.local
     networks:
       - app-network
 
   room-service:
-    image: tushar03dev/connectify-backend:room-service
+    build:
+      context: ./room-service
+      dockerfile: Dockerfile
     ports:
       - "5002:5002"
     restart: always
     env_file:
-      - .env.production
+      - .env.local
     networks:
       - app-network
 
   video-chat-service:
-    image: tushar03dev/connectify-backend:video-chat-service
+    build:
+      context: ./video-chat-service
+      dockerfile: Dockerfile
     ports:
       - "5003:5003"
     restart: always
     env_file:
-      - .env.production
+      - .env.local
     networks:
       - app-network
 
